@@ -2,23 +2,51 @@ using System;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public class TsType<TType> : TypescriptType
+    public class TsType 
     {
-        public override Specification Spec { get; }
-        public override Type ClrType { get; }
-        public override string Name { get; }
-        public override string[] ParameterNames { get; }
-
-        private TsType(Specification specification, Type type, string name = null, string[] paramNames = null)
+        public enum Specification
         {
-            Spec = specification;
-            ClrType = type;
-            Name = name;
-            ParameterNames = paramNames;
+            Variable,
+            Class,
+            Function
         }
         
-        public static TsType<TType> Function(string name) => new TsType<TType>(Specification.Function, typeof(TType), name);
-        public static TsType<TType> Class() => new TsType<TType>(Specification.Class, typeof(TType));
-        public static TsType<TType> Variable(string name) => new TsType<TType>(Specification.Interface, typeof(TType), name);
+        public Specification Spec { get; }
+        public string Name { get; }
+
+        private TsType(Specification specification, string name = null)
+        {
+            Spec = specification;
+            Name = name;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="func"></param>
+        /// <typeparam name="TFunc"></typeparam>
+        /// <returns></returns>
+        public static Interlink<TFunc> Function<TFunc>(string name, TFunc func)
+            where TFunc : MulticastDelegate =>
+            new Interlink<TFunc>(func, new TsType(Specification.Function, name));
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TType"></typeparam>
+        /// <returns></returns>
+        public static Interlink<Type> Class<TType>() =>
+            new Interlink<Type>(typeof(TType), new TsType(Specification.Class));
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="item"></param>
+        /// <typeparam name="TType"></typeparam>
+        /// <returns></returns>
+        public static Interlink<TType> Variable<TType>(string name, TType item) =>
+            new Interlink<TType>(item, new TsType(Specification.Variable, name));
     }
 }

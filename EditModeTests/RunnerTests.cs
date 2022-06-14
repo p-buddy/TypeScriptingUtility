@@ -34,24 +34,21 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
 
         public struct O
         {
-            public int Double(int x)
+            public int Double(int x, X z)
             {
+                Debug.Log(z);
                 return x + x;
-            }
-
-            public int Other(O o, int x)
-            {
-                return o.Double(x);
             }
         }
         
-        private struct Y
+        public struct Y
         {
             public int g;
         }
 
-        private class X
+        public class X
         {
+            
             public void Z(Y y)
             {
                 
@@ -72,6 +69,17 @@ console.log(x);";
             {
                 context.AddType<O>("o");
                 context.AddType<X>("X");
+            });
+        }
+
+        [Test]
+        public void Dynamic()
+        {
+            var o = new O();
+            string testString = @"console.log(x.Double(4, {}));";
+            JsRunner.ExecuteString(testString, context =>
+            {
+                context.AddVariable("x", o.Wrap());
             });
         }
     }

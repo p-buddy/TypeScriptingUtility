@@ -21,6 +21,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         static Engine Construct()
         {
             var engine = new Engine();
+            var context = new ExecutionContext(engine);
+            //context.AddVariable("console", new Logger().Wrap()); // Doesn't work yet!! TODO
             engine.SetValue("console", new Logger());
             return engine;
         }

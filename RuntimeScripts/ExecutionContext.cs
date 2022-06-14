@@ -17,6 +17,11 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             engine.SetValue(name, function);
         }
+        
+        public void AddVariable<T>(string name, T item)
+        {
+            engine.SetValue(name, item);
+        }
 
         public void AddType<T>(string name)
         {

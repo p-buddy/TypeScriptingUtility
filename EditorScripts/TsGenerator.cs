@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -9,70 +12,149 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 {
     public static class TsGenerator
     {
-        private const string ExportConst = "export const";
-        private enum FunctionType
+        private struct LinkSorter : IComparer<ILink>
         {
-            Func,
-            Action,
-            Invalid
+            public int Compare(ILink x, ILink y)
+            {
+                if (x.TsType.Spec == TsType.Specification.Class) return -1;
+                if (y.TsType.Spec == TsType.Specification.Class) return 1;
+                return 0;
+            }
         }
-        private const string ActionTypeName = "Action";
-        private const string GenericIndicator = "`";
-        private const string FuncTypeName = "Func" + GenericIndicator;
+
+        private static string Internalize(string name) => $"internalize_{name}";
+        
+        private const string ExportConst = "export const";
+        private const string TsIgnore = "// @ts-ignore";
 
         public static BindingFlags PermissiveFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static;
         
-        public static string Content(API api)
+        public static string Content(IAPI api)
         {
-            TypescriptType[] types = api.RootTypes;
-            foreach (TypescriptType type in types)
+            Dictionary<Type, TsDeclaration> typeMap = new Dictionary<Type, TsDeclaration>();
+            List<ILink> links = api.Links.ToList();
+            links.Sort(new LinkSorter());
+            StringBuilder builder = new StringBuilder(links.Count);
+            foreach (ILink link in links)
             {
-                switch (type.Spec)
+                string declaration = null;
+                switch (link.TsType.Spec)
                 {
-                    case TypescriptType.Specification.Class:
+                    case TsType.Specification.Class:
+                        declaration = GenerateClassDeclaration(link, typeMap);
                         break;
-                    case TypescriptType.Specification.Function:
-                        string name = type.ClrType.Name;
-                        string[] paramNames = type.ParameterNames;
-                        FunctionType functionType = name == ActionTypeName || name.StartsWith(ActionTypeName + GenericIndicator)
-                            ? FunctionType.Action
-                            : name.StartsWith(FuncTypeName + GenericIndicator)
-                                ? FunctionType.Func
-                                : FunctionType.Invalid;
-                        Assert.IsFalse(functionType == FunctionType.Invalid);
-                        switch (functionType)
-                        {
-                            case FunctionType.Action:
-                                break;
-                            case FunctionType.Func:
-                                break;
-                        }
+                    case TsType.Specification.Function:
+                        declaration = GenerateFunctionDeclaration(link, typeMap);
                         break;
-                    case TypescriptType.Specification.Interface:
+                    case TsType.Specification.Variable:
+                        declaration = GenerateVariableDeclaration(link, typeMap);
+                        break;
+                    default:
+                        Debug.LogError($"Unhandled spec type: {link.TsType.Spec}");
                         break;
                 }
+
+                if (declaration is null) continue;
+                builder.Append(declaration);
+            }
+
+            foreach (KeyValuePair<Type, TsDeclaration> kvp in typeMap)
+            {
+                AddDependencies(kvp.Key, typeMap);
+            }
+
+            foreach (KeyValuePair<Type, TsDeclaration> kvp in typeMap.Where(kvp => kvp.Value.NeedsDeclaration))
+            {
+                //builder.Append(GenerateInterfaceOrEnumDeclaration());
             }
             
-            return "";
+            return builder.ToString();
         }
 
-        private static string GenerateFunctionDefinition(TypescriptType function, FunctionType type)
+        private static string GenerateFunctionDeclaration(ILink link, Dictionary<Type, TsDeclaration> typeMap)
         {
-            Type[] genericArguments = function.ClrType.GetGenericArguments();
-            int argLength = genericArguments.Length;
-            string declaration = @$"
-{ExportConst} {function.Name} = (TODO): {(type == FunctionType.Action ? "void" : genericArguments[argLength - 1].AsTs())} => {{
-    // @ts-ignore
-    internal_{function.Name}();
+            MethodInfo method = (link.NonSpecificClrObject as MulticastDelegate)?.Method ?? throw new Exception("");
+            ParameterInfo[] parameters = method.GetParameters();
+            ParameterInfo @return = method.ReturnParameter;
+
+            var name = link.TsType.Name;
+            var paramsText = String.Join(", ", parameters.ToList().Select(GetParameterDeclaration));
+            
+            return @$"
+{ExportConst} {name} = ({paramsText}): {TsParam(@return)} => {{
+    {TsIgnore}
+    {Internalize(name)}
 }};";
-            return declaration;
+
+            string TsParam(ParameterInfo param) => param.ParameterType.TsName(typeMap);
+            string GetParameterDeclaration(ParameterInfo param) => $"{param.Name} {TsParam(param)}";
         }
         
+        private static string GenerateVariableDeclaration(ILink link, Dictionary<Type, TsDeclaration> typeMap)
+        {
+            var name = link.TsType.Name;
+            return $"{ExportConst} {name}: {link.ClrType.TsName(typeMap)} = {Internalize(name)};";
+        }
 
-        private static string AsTs(this Type type)
+
+        private static string GenerateClassDeclaration(ILink link, Dictionary<Type, TsDeclaration> typeMap)
         {
             // TODO
             return "";
+        }
+        
+        private static void AddDependencies(this Type type, Dictionary<Type, TsDeclaration> typeMap)
+        {
+            
+        }
+
+        private static string TsName(this Type type, Dictionary<Type, TsDeclaration> typeMap)
+        {
+            if (Primitives.TryGetTsName(type, out string name))
+            {
+                return name;
+            }
+            
+            if (typeMap.TryGetValue(type, out TsDeclaration declaration))
+            {
+                return declaration.Name;
+            }
+
+            if (TryGetTsName(type, out name))
+            {
+                typeMap[type] = new TsDeclaration(name);
+                return name;
+            }
+
+            throw new Exception();
+        }
+
+        private static bool TryGetTsName(this Type type, out string name)
+        {
+            if (type.IsArray)
+            {
+                
+            }
+            else if (type.IsEnum)
+            {
+                // Needs Checking
+                name = type.Name;
+                return true;
+            }
+            else if (type.IsGenericType)
+            {
+                // TODO
+                name = null;
+                return false;
+            }
+            else
+            {
+                name = type.Name;
+                return true;
+            }
+
+            name = null;
+            return false;
         }
         
     }

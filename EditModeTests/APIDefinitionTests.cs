@@ -2,29 +2,47 @@ using System;
 using NUnit.Framework;
 using pbuddy.TypeScriptingUtility.EditorScripts;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
+using UnityEngine;
+using Logger = pbuddy.TypeScriptingUtility.RuntimeScripts.Logger;
 
 namespace pbuddy.TypeScriptingUtility.EditModeTests
 {
     public class APIDefinitionTests
     {
-        private class MyAPI : API
+        public void XX(int x)
         {
-            public override TypescriptType[] Define()
+            
+        }
+        
+        public struct CR
+        {
+            public Interlink<Logger> Logger;
+            public Interlink<Type> LoggerClass;
+            public Interlink<Action<int, int>> Init;
+        }
+
+        private class MyAPI : API<CR>
+        {
+            protected override CR Make()
             {
-                return new TypescriptType[]
+                return new CR
                 {
-                    TsType<int>.Variable("count"),
-                    TsType<Logger>.Variable("console"),
-                    TsType<Logger>.Class(),
-                    TsType<Func<int>>.Function("init")
+                    Logger = TsType.Variable("console", new Logger()),
+                    LoggerClass = TsType.Class<Logger>(),
+                    Init = TsType.Function<Action<int, int>>("init",
+                                                             (x, y) =>
+                                                             {
+                                                                 var z = x + x;
+                                                             }),
                 };
             }
         }
-        
+
         [Test]
         public void Define()
         {
-            TsGenerator.Content(new MyAPI());
+            var api = TsGenerator.Content(new MyAPI());
+            Debug.Log(api);
         }
     }
 }

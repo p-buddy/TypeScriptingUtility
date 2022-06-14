@@ -14,6 +14,34 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             PropertiesByType = new Dictionary<Type, List<PropertyInfo>>();
         }
+
+        public static object As(this object obj, Type type)
+        {
+            /* TODO Handle when type is array.
+             // Likely should split out the internals of the To<> function
+             
+            if (type == typeof(object) || type.IsArray && type.GetElementType() == typeof(object))
+            {
+                return obj;
+            }*/
+            
+            if (type.IsInstanceOfType(obj))
+            {
+                return obj;
+            }
+
+            if (IsDirectlyConvertible(type))
+            {
+                return AsType(obj, type);
+            }
+            
+            if (obj is ExpandoObject expandoObject)
+            {
+                return To(expandoObject, type, Activator.CreateInstance);
+            }
+
+            throw new Exception($"Uh oh! {obj} vs {type}");
+        }
         
         /// <summary>
         /// 
@@ -24,6 +52,17 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         public static T To<T>(ExpandoObject obj) where T : new()
         {
             return (T)To(obj, typeof(T), _ => new T());
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static object To(Type type, ExpandoObject obj)
+        {
+            return To(obj, type, Activator.CreateInstance);
         }
         
         /// <summary>
@@ -41,7 +80,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             type.IsPrimitive || typeof(string).IsAssignableFrom(type);
         
 
-        private static object As(this object obj, Type type) => Convert.ChangeType(obj, type);
+        private static object AsType(this object obj, Type type) => Convert.ChangeType(obj, type);
 
         private static object To(ExpandoObject obj, Type type, Func<Type, object> constructor)
         {
@@ -52,7 +91,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             
             if (IsDirectlyConvertible(type))
             {
-                return obj.As(type);
+                return obj.AsType(type);
             }
             
             IDictionary<string, object> valueByProperty = obj;
@@ -66,14 +105,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     Type propertyType = propertyInfo.PropertyType;
                     if (IsDirectlyConvertible(propertyType))
                     {
-                        propertyInfo.SetValue(container, kvp.Value.As(propertyType));
+                        propertyInfo.SetValue(container, kvp.Value.AsType(propertyType));
                         continue;
                     }
 
                     if (propertyType.IsEnum)
                     {
                         string entry = kvp.Value as string;
-                        propertyInfo.SetValue(container, ConvertEnumValueBack(entry, propertyType).As(propertyType));
+                        propertyInfo.SetValue(container, ConvertEnumValueBack(entry, propertyType).AsType(propertyType));
                         continue;
                     }
 
@@ -82,10 +121,21 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                         Type elementType = propertyInfo.PropertyType.GetElementType();
                         Array input = kvp.Value as Array;
                         Array converted = Array.CreateInstance(elementType, input.Length);
-                        for (int i = 0; i < input.Length; i++)
+                        if (IsDirectlyConvertible(elementType))
                         {
-                            ExpandoObject item = input.GetValue(i) as ExpandoObject;
-                            converted.SetValue(To(item, elementType, Activator.CreateInstance).As(elementType), i); 
+                            for (int i = 0; i < input.Length; i++)
+                            {
+                                object element = input.GetValue(i);
+                                converted.SetValue(element.AsType(elementType), i);
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < input.Length; i++)
+                            {
+                                ExpandoObject element = input.GetValue(i) as ExpandoObject;
+                                converted.SetValue(To(element, elementType, Activator.CreateInstance).AsType(elementType), i); 
+                            }
                         }
 
                         propertyInfo.SetValue(container, converted);
