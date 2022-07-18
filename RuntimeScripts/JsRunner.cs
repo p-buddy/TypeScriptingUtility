@@ -1,11 +1,33 @@
 using System;
 using System.IO;
+using System.Linq;
 using Jint;
+using UnityEditor;
+using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public static class JsRunner
     {
+        private static readonly Engine TsToJsEngine;
+        static JsRunner()
+        {
+            TsToJsEngine = Construct();
+            TsToJsEngine.Execute(GetTsToJsSource());
+            TsToJsEngine.SetValue("console", new Logger());
+
+            string GetTsToJsSource()
+            {
+                string path = AssetDatabase.FindAssets("tsToJs")
+                                           .ToList()
+                                           .Select(AssetDatabase.GUIDToAssetPath)
+                                           .First(path => path.EndsWith("Assets/tsToJs.txt"));
+                return File.ReadAllText(path);
+            }
+        }
+
+        public static void CompileTs(string code) => TsToJsEngine.Execute($"console.log(tsToJs(`{code}`))");
+        
         public static void ExecuteString(string js, Action<ExecutionContext> decorator = null)
         {
             var engine = Construct();
@@ -21,8 +43,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         static Engine Construct()
         {
             var engine = new Engine();
-            var context = new ExecutionContext(engine);
-            //context.AddVariable("console", new Logger().Wrap()); // Doesn't work yet!! TODO
             engine.SetValue("console", new Logger());
             return engine;
         }

@@ -1,12 +1,16 @@
 {
     "name": "pbuddy.TypeScriptingUtility.RuntimeScripts",
-    "references": [],
+    "rootNamespace": "",
+    "references": [
+        ""
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Jint.dll"
+        "Jint.dll",
+        "Esprima.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [],

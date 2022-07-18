@@ -1,4 +1,5 @@
 using System;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 
@@ -45,7 +46,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                                                                .Select(i => GetMethodForArgCount(name, i))
                                                                .ToArray();
 
-            ActionMemberMethods = GetMethods( nameof(ActionCastAndInvoke));
+            ActionMemberMethods = GetMethods(nameof(ActionCastAndInvoke));
             FuncMemberMethods = GetMethods(nameof(FuncCastAndInvoke));
         }
         
@@ -62,11 +63,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 : GenericFuncTypes[paramsLength].MakeGenericType(parameterTypes.Append(methodInfo.ReturnType).ToArray());
             wrappedDelegate = Delegate.CreateDelegate(methodType, source, methodInfo);
             Type memberType = isAction ? NonSpecificActionTypes[paramsLength] : NonSpecificFuncTypes[paramsLength];
-            Delegate = Delegate.CreateDelegate(memberType,
-                                               this,
-                                               isAction
-                                                   ? ActionMemberMethods[paramsLength]
-                                                   : FuncMemberMethods[paramsLength]);
+            MethodInfo method = isAction ? ActionMemberMethods[paramsLength] : FuncMemberMethods[paramsLength];
+            Delegate = Delegate.CreateDelegate(memberType, this, method);
         }
 
         #region Actions

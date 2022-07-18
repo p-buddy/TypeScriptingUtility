@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -8,12 +9,22 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
 {
     public class RunnerTests
     {
+        private readonly struct EqualityAsserter
+        {
+            public static string Name => "checkEqual";
+
+            public static void Apply(ExecutionContext context)
+            {
+                context.AddFunction<Action<object, object>>(Name, Assert.AreEqual);
+            }
+        }
+        
         [Test]
         public void Log()
         {
             string testString = "This is a javascript log!";
             LogAssert.Expect(LogType.Log, testString);
-            JsRunner.ExecuteString($"console.log(\"{testString}\")");
+            JsRunner.ExecuteString($"console.log([\"{testString}\"])");
         }
         
         [Test]
@@ -32,54 +43,112 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
             JsRunner.ExecuteString($"console.error(\"{testString}\")");
         }
 
-        public struct O
+        private struct Calculator
         {
-            public int Double(int x, X z)
+            public float Divide(Quotient q)
             {
-                Debug.Log(z);
-                return x + x;
+                float expected = q.answer;
+                float actual = (float)q.numerator / q.denominator;
+                Assert.AreEqual(expected, actual);
+                return actual;
             }
         }
         
-        public struct Y
+        private struct Quotient 
         {
-            public int g;
+            public int numerator { get; set; }
+            public int denominator;
+            public float answer;
+
+            public Quotient(int n, int d)
+            {
+                numerator = n;
+                denominator = d;
+                answer = (float)n / d;
+            }
+            
+            public string JsObjectDeclaration =>
+                $"{{{nameof(numerator)}: {numerator}, {nameof(denominator)}: {denominator}, {nameof(answer)}: {answer}}}";
+
+            public static string JsDestructure => $"const {{ {nameof(numerator)}, {nameof(denominator)}, {nameof(answer)} }}";
+            public static string MemberNames = string.Join(", ", nameof(numerator), nameof(denominator), nameof(answer));
         }
 
-        public class X
-        {
-            
-            public void Z(Y y)
-            {
-                
-            }
-            
-            public void W(Action<int> z)
-            {
-                
-            }
-        }
-        
         [Test]
-        public void More()
+        public void ClrFunction()
         {
-            string testString = @"function x() {return 3;}
-console.log(x);";
+            Calculator calc = new Calculator();
+            
+            var quotient = new Quotient
+            {
+                numerator = 9,
+                denominator = 4,
+                answer = (float)9 / 4
+            };
+            
+            string testString = @$"
+const {nameof(Quotient)} = {quotient.JsObjectDeclaration};
+const result = {nameof(calc)}.{nameof(calc.Divide)}({nameof(Quotient)});
+{EqualityAsserter.Name}(result, {quotient.answer});
+console.log(result);
+"; 
             JsRunner.ExecuteString(testString, context =>
             {
-                context.AddType<O>("o");
-                context.AddType<X>("X");
+                context.AddVariable(nameof(calc), calc.Wrap());
+                EqualityAsserter.Apply(context);
             });
         }
 
         [Test]
-        public void Dynamic()
+        public void ReturnNonPrimitive()
         {
-            var o = new O();
-            string testString = @"console.log(x.Double(4, {}));";
+            var quotient = new Quotient(10, 20);
+            
+            string funcName = "get";
+            string testString = @$"
+{Quotient.JsDestructure} = {funcName}();
+{EqualityAsserter.Name}({nameof(Quotient.numerator)}, {quotient.numerator});
+{EqualityAsserter.Name}({nameof(Quotient.denominator)}, {quotient.denominator});
+{EqualityAsserter.Name}({nameof(Quotient.answer)}, {quotient.answer});
+console.log({Quotient.MemberNames});
+";
             JsRunner.ExecuteString(testString, context =>
             {
-                context.AddVariable("x", o.Wrap());
+                context.AddFunction<Func<Quotient>>(funcName, () => quotient);
+                EqualityAsserter.Apply(context);
+            });
+        }
+
+        private struct Globals
+        {
+            public List<int> Numbers;
+            public Interlink<Action<int>> AppendNumber;
+        }
+
+        private class MyAPI : API<Globals>
+        {
+            protected override Globals Make()
+            {
+                List<int> numbers = new List<int>();
+                return new Globals
+                {
+                    Numbers = new List<int>(),
+                    AppendNumber = TsType.Function<Action<int>>("append", i => numbers.Add(i))
+                };
+            }
+        }
+
+        [Test]
+        public void API()
+        {
+            string testString = @$"";
+            var api = new MyAPI();
+            
+            JsRunner.CompileTs("const x: string = \"hello\"");
+
+            JsRunner.ExecuteString(testString, context =>
+            {
+                context.ApplyAPI(api);
             });
         }
     }

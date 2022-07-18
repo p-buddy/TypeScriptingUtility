@@ -1,5 +1,10 @@
+using System;
+using System.Linq;
 using Jint;
 using Jint.Runtime.Interop;
+using pbuddy.TypeScriptingUtility.EditorScripts;
+using UnityEditor;
+using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
@@ -26,6 +31,15 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         public void AddType<T>(string name)
         {
             engine.SetValue(name, TypeReference.CreateTypeReference(engine, typeof(T)));
+        }
+
+        public void ApplyAPI<T>(API<T> api)
+        {
+            string content = TsGenerator.Content(api);
+            var paths = AssetDatabase.FindAssets("tsc").ToList().Select(AssetDatabase.GUIDToAssetPath).Where(path => path.EndsWith("tsc.txt"));
+            Debug.Log(paths);
+            Debug.Log(content);
+            //engine.Execute(content);
         }
     }
 }
