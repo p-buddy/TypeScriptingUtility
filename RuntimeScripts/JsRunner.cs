@@ -10,18 +10,20 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     public static class JsRunner
     {
         private static readonly Engine TsToJsEngine;
+        private const string TsToJsFile = "tsToJs.txt";
         static JsRunner()
         {
             TsToJsEngine = Construct();
-            TsToJsEngine.Execute(GetTsToJsSource());
+            TsToJsEngine.SetValue("global", new object());
             TsToJsEngine.SetValue("console", new Logger());
+            TsToJsEngine.Execute(GetTsToJsSource());
 
             string GetTsToJsSource()
             {
-                string path = AssetDatabase.FindAssets("tsToJs")
+                string path = AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(TsToJsFile))
                                            .ToList()
                                            .Select(AssetDatabase.GUIDToAssetPath)
-                                           .First(path => path.EndsWith("Assets/tsToJs.txt"));
+                                           .First(path => path.EndsWith(TsToJsFile));
                 return File.ReadAllText(path);
             }
         }
