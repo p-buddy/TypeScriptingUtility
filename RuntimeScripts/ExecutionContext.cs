@@ -32,14 +32,22 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             engine.SetValue(name, TypeReference.CreateTypeReference(engine, typeof(T)));
         }
+        
+        public void AddType(string name, Type type)
+        {
+            engine.SetValue(name, TypeReference.CreateTypeReference(engine, type));
+        }
 
         public void ApplyAPI<T>(API<T> api)
         {
-            string content = TsGenerator.Content(api);
-            var paths = AssetDatabase.FindAssets("tsc").ToList().Select(AssetDatabase.GUIDToAssetPath).Where(path => path.EndsWith("tsc.txt"));
-            Debug.Log(paths);
-            Debug.Log(content);
-            //engine.Execute(content);
+            ILink[] links = api.Links;
+            foreach (ILink link in links)
+            {
+                string name = link.TsType.Name;
+                link.TsType.Match(() => AddVariable(name, link.NonSpecificClrObject.Wrap()), 
+                                  () => AddType(name, link.ClrType), 
+                                  () => AddFunction(name, link.NonSpecificClrObject.Wrap()));
+            }
         }
     }
 }

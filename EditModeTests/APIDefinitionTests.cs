@@ -3,7 +3,6 @@ using NUnit.Framework;
 using pbuddy.TypeScriptingUtility.EditorScripts;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using UnityEngine;
-using Logger = pbuddy.TypeScriptingUtility.RuntimeScripts.Logger;
 
 namespace pbuddy.TypeScriptingUtility.EditModeTests
 {
@@ -16,19 +15,19 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
         
         public struct CR
         {
-            public Interlink<Logger> Logger;
-            public Interlink<Type> LoggerClass;
-            public Interlink<Action<int, int>> Init;
+            public Shared<JsLikeConsole> Logger;
+            public Shared<Type> LoggerClass;
+            public Shared<Action<int, int>> Init;
         }
 
         private class MyAPI : API<CR>
         {
-            protected override CR Make()
+            protected override CR Define()
             {
                 return new CR
                 {
-                    Logger = TsType.Variable("console", new Logger()),
-                    LoggerClass = TsType.Class<Logger>(),
+                    Logger = TsType.Variable("console", new JsLikeConsole()),
+                    LoggerClass = TsType.Class<JsLikeConsole>(),
                     Init = TsType.Function<Action<int, int>>("init",
                                                              (x, y) =>
                                                              {

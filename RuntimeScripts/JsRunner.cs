@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using Jint;
 using UnityEditor;
-using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
@@ -15,7 +14,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             TsToJsEngine = Construct();
             TsToJsEngine.SetValue("global", new object());
-            TsToJsEngine.SetValue("console", new Logger());
+            TsToJsEngine.SetValue("console", new JsLikeConsole());
             TsToJsEngine.Execute(GetTsToJsSource());
 
             string GetTsToJsSource()
@@ -28,8 +27,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             }
         }
 
-        public static void CompileTs(string code) => TsToJsEngine.Execute($"console.log(tsToJs(`{code}`))");
-        
+        public static string CompileTs(string code) => TsToJsEngine.Evaluate($"tsToJs(`{code}`)").AsString();
         public static void ExecuteString(string js, Action<ExecutionContext> decorator = null)
         {
             var engine = Construct();
@@ -45,7 +43,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         static Engine Construct()
         {
             var engine = new Engine();
-            engine.SetValue("console", new Logger());
+            engine.SetValue("console", new JsLikeConsole());
             return engine;
         }
     }

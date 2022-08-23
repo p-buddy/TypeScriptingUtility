@@ -7,11 +7,24 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public abstract class API<T> : IAPI
     {
-        public ILink[] Links => StripOutTsRootTypes(Make());
-        
-        protected abstract T Make();
+        private bool defined;
+        private T globals;
 
-        private ILink[] StripOutTsRootTypes(T obj)
+        public T Domain
+        {
+            get
+            {
+                globals = defined ? globals : Define();
+                defined = true;
+                return globals;
+            }
+        }
+
+        public ILink[] Links => RetrieveTsRootTypes(Domain);
+
+        protected abstract T Define();
+
+        private ILink[] RetrieveTsRootTypes(T obj)
         {
             const BindingFlags flags = BindingFlags.Public |
                                        BindingFlags.NonPublic |

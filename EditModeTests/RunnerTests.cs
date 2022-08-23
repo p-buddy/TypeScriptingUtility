@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
+using Debug = UnityEngine.Debug;
+using Random = System.Random;
 
 namespace pbuddy.TypeScriptingUtility.EditModeTests
 {
@@ -119,37 +122,120 @@ console.log({Quotient.MemberNames});
             });
         }
 
+        private (string, long) CompileAndGetAverageMilliseconds(string code)
+        {
+            string result = JsRunner.CompileTs(code); // Run once so JS Runner initialize
+
+            Stopwatch stopwatch = new Stopwatch();
+            const int iterations = 10;
+            for (int i = 0; i < iterations; i++)
+            {
+                stopwatch.Start();
+                JsRunner.CompileTs(code);
+                stopwatch.Stop();
+            }
+
+            return (result, stopwatch.ElapsedMilliseconds / iterations);
+        }
+
+        [Test]
+        public void CompileSmallTypescript()
+        {
+            const string sample = "const x: string = \"hello\"";
+
+            (string result, long elapsedMs) = CompileAndGetAverageMilliseconds(sample);
+            Debug.Log(result);
+            Debug.Log($"Average execution time: {elapsedMs}ms");
+        }
+
         private struct Globals
         {
             public List<int> Numbers;
-            public Interlink<Action<int>> AppendNumber;
+            public Shared<Action<int>> AppendNumber;
+            public Shared<Action<int>> AppendNumberLambda;
         }
 
         private class MyAPI : API<Globals>
         {
-            protected override Globals Make()
+            protected override Globals Define()
             {
                 List<int> numbers = new List<int>();
                 return new Globals
                 {
-                    Numbers = new List<int>(),
-                    AppendNumber = TsType.Function<Action<int>>("append", i => numbers.Add(i))
+                    Numbers = numbers,
+                    AppendNumber = TsType.Function<Action<int>>("append", numbers.Add),
+                    AppendNumberLambda = TsType.Function<Action<int>>("lambda", i => numbers.Add(i)),
                 };
             }
         }
 
         [Test]
-        public void API()
+        public void APISimple()
         {
-            string testString = @$"";
-            var api = new MyAPI();
+            var random = new Random();
+            var testValues = new [] { random.Next(), random.Next() };
             
-            JsRunner.CompileTs("const x: string = \"hello\"");
-
+            string testString = @$"
+append({testValues[0]});
+lambda({testValues[1]})";
+            MyAPI api = new MyAPI();
+            
             JsRunner.ExecuteString(testString, context =>
             {
                 context.ApplyAPI(api);
             });
+            
+            Assert.AreEqual(testValues[0], api.Domain.Numbers[0]);
+            Assert.AreEqual(testValues[1], api.Domain.Numbers[1]);
+        }
+
+        private struct Powers
+        {
+            public int Root;
+            public int Exponent { get; set; }
+        }
+        
+        private struct Real
+        {
+            public List<int> ClrTally;
+            public Shared<List<int>> JsTally;
+            public Shared<Func<Powers, int>> SquareAndCube;
+        }
+
+        private class RealisticAPI : API<Real>
+        {
+            protected override Real Define()
+            {
+                var clrTally = new List<int>();
+                return new Real
+                {
+                    ClrTally = clrTally,
+                    JsTally = TsType.Variable("tally", new List<int>()),
+                    SquareAndCube = TsType.Function<Func<Powers, int>>("run", powers =>
+                    {
+                        int result = (int)Math.Pow(powers.Root, powers.Exponent);
+                        clrTally.Add(result);
+                        return result;
+                    })
+                };
+            }
+        }
+        
+        [Test]
+        public void APIComplex()
+        {
+            var random = new Random();
+            var testValues = new [] { random.Next(), random.Next() };
+            
+            string testString = @$"tally.Add(run({{ Root: 2, Exponent: 3 }}));";
+            RealisticAPI api = new RealisticAPI();
+            
+            JsRunner.ExecuteString(testString, context =>
+            {
+                context.ApplyAPI(api);
+            });
+            
+            Assert.AreEqual(api.Domain.ClrTally[0], api.Domain.JsTally.ClrObject[0]);
         }
     }
 }

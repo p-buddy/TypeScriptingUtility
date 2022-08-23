@@ -23,8 +23,6 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                 return 0;
             }
         }
-
-        private static string Internalize(string name) => $"internalize_{name}";
         
         private const string ExportConst = "export const";
         private const string TsIgnore = "// @ts-ignore";
@@ -39,22 +37,9 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             StringBuilder builder = new StringBuilder(links.Count);
             foreach (ILink link in links)
             {
-                string declaration = null;
-                switch (link.TsType.Spec)
-                {
-                    case TsType.Specification.Class:
-                        declaration = GenerateClassDeclaration(link, typeMap);
-                        break;
-                    case TsType.Specification.Function:
-                        declaration = GenerateFunctionDeclaration(link, typeMap);
-                        break;
-                    case TsType.Specification.Variable:
-                        declaration = GenerateVariableDeclaration(link, typeMap);
-                        break;
-                    default:
-                        Debug.LogError($"Unhandled spec type: {link.TsType.Spec}");
-                        break;
-                }
+                string declaration = link.TsType.Match(() => GenerateVariableDeclaration(link, typeMap),
+                                                       () => GenerateClassDeclaration(link, typeMap),
+                                                       () => GenerateFunctionDeclaration(link, typeMap));
 
                 if (declaration is null) continue;
                 builder.Append(declaration);
@@ -86,7 +71,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             return @$"
 {ExportConst} {name} = ({paramsText}): {TsParam(@return)} => {{
     {TsIgnore}
-    return {Internalize(name)}({argsText});
+    return {TsType.Internalize(name)}({argsText});
 }};";
 
             string TsParam(ParameterInfo param) => param.ParameterType.TsName(typeMap);
@@ -97,7 +82,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         private static string GenerateVariableDeclaration(ILink link, Dictionary<Type, TsDeclaration> typeMap)
         {
             string name = link.TsType.Name;
-            return $"{ExportConst} {name}: {link.ClrType.TsName(typeMap)} = {Internalize(name)};";
+            return $"{ExportConst} {name}: {link.ClrType.TsName(typeMap)} = {TsType.Internalize(name)};";
         }
 
 

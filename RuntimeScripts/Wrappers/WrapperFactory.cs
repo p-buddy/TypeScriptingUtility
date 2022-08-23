@@ -10,9 +10,16 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public static class WrapperFactory
     {
-        public static ExpandoObject Wrap(this object obj)
+        public static object Wrap(this object obj)
         {
-            var type = obj.GetType();
+            if (obj is MulticastDelegate del)
+            {
+                var target = del.Target;
+                MethodInfo methodInfo = del.GetMethodInfo();
+                return new MethodWrapper(target, methodInfo).Delegate;
+            }
+            
+            Type type = obj.GetType();
             MemberInfo[] members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
             ExpandoObject expando = new ExpandoObject();
             IDictionary<string, object> dictionary = expando; 
