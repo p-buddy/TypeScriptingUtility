@@ -99,7 +99,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 
         private static string TsName(this Type type, Dictionary<Type, TsDeclaration> typeMap)
         {
-            if (Primitives.TryGetTsName(type, out string name))
+            if (TsPrimitives.TryGetTsName(type, out string name))
             {
                 return name;
             }

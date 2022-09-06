@@ -4,7 +4,7 @@ using UnityEngine.Assertions;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-  public static class Primitives
+  public static class TsPrimitives
   {
     public static bool TryGetTsName(Type type, out string name)
     {
@@ -25,7 +25,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     private static readonly Dictionary<Type, Type[]> JsToClr;
     private static readonly Dictionary<Type, string> NameByJsType;
     
-    static Primitives()
+    static TsPrimitives()
     {
       ClrToJs = new Dictionary<Type, Type>
       {
