@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public class JsLikeConsole
+    public readonly struct JsLikeConsole
     {
         public void log(params object[] msgs) => msgs.ToList().ForEach(Debug.Log);
         public void error(params object[] msgs) => msgs.ToList().ForEach(Debug.LogError);

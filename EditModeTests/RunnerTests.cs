@@ -200,6 +200,21 @@ lambda({testValues[1]})";
             public List<int> ClrTally;
             public Shared<List<int>> JsTally;
             public Shared<Func<Powers, int>> SquareAndCube;
+            public Shared<Test> Test;
+        }
+
+        private struct Test
+        {
+            public int x;
+            public int Bab
+            {
+                get
+                {
+                    Debug.Log("hi");
+                    return 5;   
+                }
+                set => Debug.Log("oh");
+            }
         }
 
         private class RealisticAPI : API<Real>
@@ -211,7 +226,8 @@ lambda({testValues[1]})";
                 {
                     ClrTally = clrTally,
                     JsTally = TsType.Variable("tally", new List<int>()),
-                    SquareAndCube = TsType.Function<Func<Powers, int>>("run", powers =>
+                    Test = TsType.Variable("test", new Test()),
+                    SquareAndCube = TsType.Function<Func<Powers, int>>("eval", powers =>
                     {
                         int result = (int)Math.Pow(powers.Root, powers.Exponent);
                         clrTally.Add(result);
@@ -227,14 +243,22 @@ lambda({testValues[1]})";
             var random = new Random();
             var testValues = new [] { random.Next(), random.Next() };
             
-            string testString = @$"tally.Add(run({{ Root: 2, Exponent: 3 }}));";
+            string testString = @$"
+console.log(test.x);
+test.x = 3;
+tally.Add(eval({{ Root: 2, Exponent: 3 }}));
+console.log(test.x);
+test.x = 5;
+console.log(test.Bab);
+test.Bab = 2;
+console.log(test.Bab);
+";
             RealisticAPI api = new RealisticAPI();
             
             JsRunner.ExecuteString(testString, context =>
             {
                 context.ApplyAPI(api);
             });
-            
             Assert.AreEqual(api.Domain.ClrTally[0], api.Domain.JsTally.ClrObject[0]);
         }
     }
