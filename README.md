@@ -10,5 +10,5 @@ Ah, typesafe scripting! Easily give users an API to interact with your project w
 
 # Is it blazingly fast?
 
-**No.**
+***No.***
 
