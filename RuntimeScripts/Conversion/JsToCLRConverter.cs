@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
@@ -16,51 +16,59 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             DataMembersByType = new Dictionary<Type, DataMember[]>();
         }
 
-        public static object As(this object obj, Type type)
+        public static object As(this object obj, Type type, IClrToTsNameMapper mapper = null)
         {
-            if (type.IsInstanceOfType(obj))
+            try
             {
-                return obj;
+                if (type.IsInstanceOfType(obj))
+                {
+                    return obj;
+                }
+
+                if (IsDirectlyConvertible(type))
+                {
+                    return AsType(obj, type);
+                }
+
+                switch (obj)
+                {
+                    case ExpandoObject expandoObject:
+                        return To(expandoObject, type, Activator.CreateInstance, mapper);
+                    case Array arr:
+                        return ExtractArray(type, arr);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Uh  oh! There was this exception while trying to cast {obj} to type {type}: {e}");
             }
 
-            if (IsDirectlyConvertible(type))
-            {
-                return AsType(obj, type);
-            }
-            
-            if (obj is ExpandoObject expandoObject)
-            {
-                return To(expandoObject, type, Activator.CreateInstance);
-            }
 
-            if (obj is Array)
-            {
-                Debug.Log("Array!!!!");
-            }
-
-            throw new Exception($"Uh oh! {obj} vs {type}");
+            throw new Exception($"Uh oh! Unhandled case for casting {obj} to type {type}.");
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="obj"></param>
+        /// <param name="mapper"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T To<T>(ExpandoObject obj) where T : new()
+        public static T To<T>(ExpandoObject obj, IClrToTsNameMapper mapper = null) where T : new()
         {
-            return (T)To(obj, typeof(T), _ => new T());
+            return (T)To(obj, typeof(T), _ => new T(), mapper);
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="type"></param>
         /// <param name="obj"></param>
+        /// <param name="mapper"></param>
         /// <returns></returns>
-        public static object To(Type type, ExpandoObject obj)
+        public static object To(Type type, ExpandoObject obj, IClrToTsNameMapper mapper = null)
         {
-            return To(obj, type, Activator.CreateInstance);
+            return To(obj, type, Activator.CreateInstance, mapper);
         }
         
         /// <summary>
@@ -75,12 +83,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         }
 
         private static bool IsDirectlyConvertible(Type type) =>
-            type.IsPrimitive || typeof(string).IsAssignableFrom(type);
+            !type.IsArray && type.IsPrimitive || typeof(string).IsAssignableFrom(type);
         
-
         private static object AsType(this object obj, Type type) => Convert.ChangeType(obj, type);
 
-        private static object To(ExpandoObject obj, Type type, Func<Type, object> constructor)
+        private static object To(ExpandoObject obj,
+                                 Type type,
+                                 Func<Type, object> constructor,
+                                 IClrToTsNameMapper mapper = null)
         {
             if (type.IsInstanceOfType(obj))
             {
@@ -97,7 +107,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
             foreach (KeyValuePair<string, object> kvp in valueByProperty)
             {
-                string name = kvp.Key;
+                string name = mapper.MapToClr(kvp.Key);
                 if (!TryMatchMember(name, type, out DataMember member))
                 {
                     throw new Exception($"Could not match property for: {name}");
@@ -119,27 +129,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
                 if (memberType.IsArray)
                 {
-                    Type elementType = memberType.GetElementType();
-                    Array input = kvp.Value as Array;
-                    Array converted = Array.CreateInstance(elementType, input.Length);
-                    if (IsDirectlyConvertible(elementType))
-                    {
-                        for (int i = 0; i < input.Length; i++)
-                        {
-                            object element = input.GetValue(i);
-                            converted.SetValue(element.AsType(elementType), i);
-                        }
-                    }
-                    else
-                    {
-                        for (int i = 0; i < input.Length; i++)
-                        {
-                            ExpandoObject element = input.GetValue(i) as ExpandoObject;
-                            converted.SetValue(To(element, elementType, Activator.CreateInstance).AsType(elementType), i); 
-                        }
-                    }
-
-                    member.SetValue(container, converted);
+                    member.SetValue(container, ExtractArray(memberType, kvp.Value));
                     continue;
                 }
                 
@@ -147,6 +137,33 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             }
 
             return container;
+        }
+
+        private static Array ExtractArray(Type arrayType, object arrayObject)
+        {
+            Type elementType = arrayType.GetElementType();
+            Assert.IsNotNull(elementType);
+            Array arr = arrayObject as Array;
+            Assert.IsNotNull(arr);
+            Array converted = Array.CreateInstance(elementType, arr.Length);
+            if (IsDirectlyConvertible(elementType))
+            {
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    object element = arr.GetValue(i);
+                    converted.SetValue(element.AsType(elementType), i);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    ExpandoObject element = arr.GetValue(i) as ExpandoObject;
+                    converted.SetValue(To(element, elementType, Activator.CreateInstance).AsType(elementType), i); 
+                }
+            }
+
+            return converted;
         }
         
         private static bool TryMatchMember(string name, Type type, out DataMember member)
@@ -161,12 +178,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 DataMembersByType.Add(type, members);
             }
 
-            string camel = AsCamelCase(name);
-            string pascal = AsPascalCase(name);
-            
             foreach (DataMember candidate in members)
             {
-                if (candidate.Name == camel || candidate.Name == pascal)
+                if (candidate.Name == name)
                 {
                     member = candidate;
                     return true;
@@ -175,8 +189,5 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
             return false;
         }
-
-        private static string AsPascalCase(string s) => Char.ToUpper(s[0]) + s.Substring(1);
-        private static string AsCamelCase(string s) => Char.ToLower(s[0]) + s.Substring(1);
     }
 }

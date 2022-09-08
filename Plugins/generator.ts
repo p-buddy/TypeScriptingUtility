@@ -8,7 +8,7 @@ const generateMethod = (opener: string) => {
     const withParams = alphabet.map((_, index) => {
         const all: string[] = [...alphabet].splice(0, index + 1);
         const params = all.map(l => `object ${l}`).join(", ");
-        const invocations = all.map((l, i) => `${l}.As(parameterTypes[${i}])`).join(", ");
+        const invocations = all.map((l, i) => `${l}.As(parameterTypes[${i}], mapper)`).join(", ");
         return makeSignature(opener, params, invocations);
     });
     return [makeSignature(opener, "", ""), ...withParams].join(indent1);

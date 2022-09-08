@@ -5,12 +5,12 @@ using System.Reflection;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public abstract class API<T> : IAPI
+    public abstract class API<TExecutionDomain> : IAPI
     {
         private bool defined;
-        private T globals;
+        private TExecutionDomain globals;
 
-        public T Domain
+        public TExecutionDomain Domain
         {
             get
             {
@@ -20,11 +20,11 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             }
         }
 
+        public virtual IClrToTsNameMapper NameMapper => ClrToTsNameMapper.Default;
         public ILink[] Links => RetrieveTsRootTypes(Domain);
+        protected abstract TExecutionDomain Define();
 
-        protected abstract T Define();
-
-        private ILink[] RetrieveTsRootTypes(T obj)
+        private ILink[] RetrieveTsRootTypes(TExecutionDomain obj)
         {
             const BindingFlags flags = BindingFlags.Public |
                                        BindingFlags.NonPublic |
@@ -49,15 +49,12 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
             ILink AsLink(MemberInfo info)
             {
-                switch (info.MemberType)
+                return info.MemberType switch
                 {
-                    case MemberTypes.Field:
-                        return (info as FieldInfo)?.GetValue(obj) as ILink;
-                    case MemberTypes.Property:
-                        return (info as PropertyInfo)?.GetValue(obj) as ILink;
-                }
-
-                throw new Exception();
+                    MemberTypes.Field => (info as FieldInfo)?.GetValue(obj) as ILink,
+                    MemberTypes.Property => (info as PropertyInfo)?.GetValue(obj) as ILink,
+                    _ => throw new Exception()
+                };
             }
             #endregion
         }

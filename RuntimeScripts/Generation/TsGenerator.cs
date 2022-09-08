@@ -37,9 +37,12 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             StringBuilder builder = new StringBuilder(links.Count);
             foreach (ILink link in links)
             {
-                string declaration = link.TsType.Match(() => GenerateVariableDeclaration(link, typeMap),
-                                                       () => GenerateClassDeclaration(link, typeMap),
-                                                       () => GenerateFunctionDeclaration(link, typeMap));
+                string declaration = link.TsType.Match(new TsType.Matcher.Func<string>
+                {
+                    OnVariable = () => GenerateVariableDeclaration(link, typeMap),
+                    OnClass = () => GenerateClassDeclaration(link, typeMap),
+                    OnFunction = () => GenerateFunctionDeclaration(link, typeMap)
+                });
 
                 if (declaration is null) continue;
                 builder.Append(declaration);

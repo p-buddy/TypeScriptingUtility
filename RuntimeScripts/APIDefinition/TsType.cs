@@ -4,6 +4,27 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public class TsType 
     {
+        public static class Matcher
+        {
+            public delegate void ActionDelegate();
+            public delegate TReturn FuncDelegate<out TReturn>();
+
+            public class Action
+            {
+                public ActionDelegate OnVariable;
+                public ActionDelegate OnClass;
+                public ActionDelegate OnFunction;
+            }
+        
+        
+            public class Func<TReturn>
+            {
+                public FuncDelegate<TReturn> OnVariable;
+                public FuncDelegate<TReturn> OnClass;
+                public FuncDelegate<TReturn> OnFunction;
+            }
+        }
+        
         public static string Internalize(string name) => $"internalize_{name}";
 
         public enum Specification
@@ -51,34 +72,34 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// <returns></returns>
         public static Shared<TType> Variable<TType>(string name, TType item) =>
             new Shared<TType>(item, new TsType(Specification.Variable, name));
-        
-        public void Match(Action onVariable, Action onClass, Action onFunction)
+
+        public void Match(Matcher.Action matcher)
         {
             switch (Spec)
             {
                 case Specification.Class:
-                    onClass();
+                    matcher.OnClass();
                     return;
                 case Specification.Function:
-                    onFunction();
+                    matcher.OnFunction();
                     return;
                 case Specification.Variable:
-                    onVariable();
+                    matcher.OnVariable();
                     return;
             }
             throw new ArgumentException($"Unhandled spec type: {Spec}");
         }
 
-        public TReturn Match<TReturn>(Func<TReturn> onVariable, Func<TReturn> onClass, Func<TReturn> onFunction)
+        public TReturn Match<TReturn>(Matcher.Func<TReturn> matcher)
         {
             switch (Spec)
             {
                 case Specification.Class:
-                    return onClass();
+                    return matcher.OnClass();
                 case Specification.Function:
-                    return onFunction();
+                    return matcher.OnFunction();
                 case Specification.Variable:
-                    return onVariable();
+                    return matcher.OnVariable();
             }
             throw new ArgumentException($"Unhandled spec type: {Spec}");
         }

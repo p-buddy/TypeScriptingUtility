@@ -43,11 +43,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             ILink[] links = api.Links;
             foreach (ILink link in links)
             {
-                string name = link.TsType.Name;
-                link.TsType.Match(() => AddVariable(name, link.NonSpecificClrObject.Wrap()), 
-                                  () => AddType(name, link.ClrType), 
-                                  () => AddFunction(name, link.NonSpecificClrObject.Wrap()));
-            }
+                string name = api.NameMapper.MapToTs(link.TsType.Name);
+                link.TsType.Match(new TsType.Matcher.Action
+                {
+                    OnVariable = () => AddVariable(name, link.NonSpecificClrObject.Wrap(api.NameMapper)),
+                    OnClass = () => AddType(name, link.ClrType),
+                    OnFunction = () => AddFunction(name, link.NonSpecificClrObject.Wrap(api.NameMapper))
+                });
+            } 
         }
     }
 }

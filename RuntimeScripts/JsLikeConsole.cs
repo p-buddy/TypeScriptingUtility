@@ -3,10 +3,30 @@ using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public readonly struct JsLikeConsole
     {
-        public void log(params object[] msgs) => msgs.ToList().ForEach(Debug.Log);
-        public void error(params object[] msgs) => msgs.ToList().ForEach(Debug.LogError);
-        public void warn(params object[] msgs) => msgs.ToList().ForEach(Debug.LogWarning);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="messages"></param>
+        // ReSharper disable once InconsistentNaming
+        public void log(params object[] messages) => messages.ToList().ForEach(Debug.Log);
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="messages"></param>
+        // ReSharper disable once InconsistentNaming
+        public void error(params object[] messages) => messages.ToList().ForEach(Debug.LogError);
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="messages"></param>
+        // ReSharper disable once InconsistentNaming
+        public void warn(params object[] messages) => messages.ToList().ForEach(Debug.LogWarning);
     }
 }

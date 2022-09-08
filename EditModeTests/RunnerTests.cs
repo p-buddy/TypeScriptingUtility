@@ -201,8 +201,9 @@ lambda({testValues[1]})";
             public Shared<List<int>> JsTally;
             public Shared<Func<Powers, int>> SquareAndCube;
             public Shared<Test> Test;
+            public Shared<Action<int[]>> TakeArr;
         }
-
+        
         private struct Test
         {
             public int x;
@@ -219,6 +220,8 @@ lambda({testValues[1]})";
 
         private class RealisticAPI : API<Real>
         {
+            public override IClrToTsNameMapper NameMapper => ClrToTsNameMapper.PascalToCamelCase;
+
             protected override Real Define()
             {
                 var clrTally = new List<int>();
@@ -232,6 +235,10 @@ lambda({testValues[1]})";
                         int result = (int)Math.Pow(powers.Root, powers.Exponent);
                         clrTally.Add(result);
                         return result;
+                    }),
+                    TakeArr = TsType.Function<Action<int[]>>("take", (int[] arr) =>
+                    {
+                        
                     })
                 };
             }
@@ -244,22 +251,20 @@ lambda({testValues[1]})";
             var testValues = new [] { random.Next(), random.Next() };
             
             string testString = @$"
-console.log(test.x);
+take([3,2]);
 test.x = 3;
-tally.Add(eval({{ Root: 2, Exponent: 3 }}));
-console.log(test.x);
+tally.add(eval({{ root: 2, exponent: 4 }}));
+take([1]);
 test.x = 5;
-console.log(test.Bab);
-test.Bab = 2;
-console.log(test.Bab);
+test.bab = 2;
 ";
-            RealisticAPI api = new RealisticAPI();
             
-            JsRunner.ExecuteString(testString, context =>
-            {
-                context.ApplyAPI(api);
-            });
-            Assert.AreEqual(api.Domain.ClrTally[0], api.Domain.JsTally.ClrObject[0]);
+            new RealisticAPI().Test(testString,
+                                    (Real domain) =>
+                                    {
+                                        Debug.Log(domain.ClrTally[0]);
+                                        Assert.AreEqual(domain.ClrTally[0], domain.JsTally.ClrObject[0]);
+                                    });
         }
     }
 }
