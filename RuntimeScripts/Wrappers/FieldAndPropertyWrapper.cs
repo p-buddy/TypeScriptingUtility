@@ -8,17 +8,18 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     internal readonly struct FieldAndPropertyWrapper
     {
+        const int DefaultIndexCount = 100;
+        
         private readonly object parent;
         private readonly FieldInfo field;
         private readonly PropertyInfo property;
         private readonly Type type;
         private readonly string name;
         private readonly IClrToTsNameMapper mapper;
+        private readonly bool isIndexer;
         private object CurrentValue =>
             field?.GetValue(parent) ??
-            (property.GetIndexParameters().Any()
-                ? null // TODO: Handle indexers...somehow? with numbered keys? Numbered keys work, but obviously inefficient
-                : property.GetValue(parent));
+            (isIndexer ? null : property.GetValue(parent));
 
         private FieldAndPropertyWrapper(object parent,
                                         ExpandoObject expando,
@@ -30,10 +31,24 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             this.property = property;
             this.field = field;
             this.mapper = mapper;
-            name = this.mapper.MapToTs(this.field?.Name ?? this.property.Name);
             type = this.field?.FieldType ?? this.property.PropertyType;
-            expando.Add(name, CurrentValue);
-            ((INotifyPropertyChanged)expando).PropertyChanged += OnChange;
+            isIndexer = this.property?.GetIndexParameters().Any() ?? false;
+            if (!isIndexer)
+            {
+                name = this.mapper.MapToTs(this.field?.Name ?? this.property.Name);
+                expando.Add(name, CurrentValue);
+                ((INotifyPropertyChanged)expando).PropertyChanged += OnChange;
+                return;
+            }
+
+            // Overall, this code is bananas!! Hopefully not too many indexable types will need to be passed around
+            for (int i = 0; i < Int32.MaxValue; i++)
+            {
+                try { expando.Add($"{i}", property.GetValue(parent, new object[] { i })); } 
+                catch { break; }
+            }
+
+            name = "indexer";
         }
 
         public FieldAndPropertyWrapper(object parent, FieldInfo field, ExpandoObject expando, IClrToTsNameMapper mapper) :

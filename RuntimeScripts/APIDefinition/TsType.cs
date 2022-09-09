@@ -52,16 +52,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// <typeparam name="TFunc"></typeparam>
         /// <returns></returns>
         public static Shared<TFunc> Function<TFunc>(string name, TFunc func)
-            where TFunc : MulticastDelegate =>
-            new Shared<TFunc>(func, new TsType(Specification.Function, name));
+            where TFunc : MulticastDelegate => new(func, new TsType(Specification.Function, name));
         
         /// <summary>
-        /// 
+        /// Handled completely on TS side?
         /// </summary>
         /// <typeparam name="TType"></typeparam>
         /// <returns></returns>
-        public static Shared<Type> Class<TType>() =>
-            new Shared<Type>(typeof(TType), new TsType(Specification.Class));
+        public static Shared<Type> Class<TType>() => new(typeof(TType), new TsType(Specification.Class));
         
         /// <summary>
         /// 
@@ -70,8 +68,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// <param name="item"></param>
         /// <typeparam name="TType"></typeparam>
         /// <returns></returns>
-        public static Shared<TType> Variable<TType>(string name, TType item) =>
-            new Shared<TType>(item, new TsType(Specification.Variable, name));
+        public static Shared<TType> Variable<TType>(string name, TType item) => new(item, new TsType(Specification.Variable, name));
 
         public void Match(Matcher.Action matcher)
         {

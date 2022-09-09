@@ -255,6 +255,7 @@ take([3,2]);
 test.x = 3;
 tally.add(eval({{ root: 2, exponent: 4 }}));
 take([1]);
+console.log(tally[1]);
 test.x = 5;
 test.bab = 2;
 ";
@@ -263,7 +264,7 @@ test.bab = 2;
                                     (Real domain) =>
                                     {
                                         Debug.Log(domain.ClrTally[0]);
-                                        Assert.AreEqual(domain.ClrTally[0], domain.JsTally.ClrObject[0]);
+                                        //Assert.AreEqual(domain.ClrTally[0], domain.JsTally.ClrObject[0]);
                                     });
         }
     }
