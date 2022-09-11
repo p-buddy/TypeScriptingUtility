@@ -27,7 +27,6 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
                 return new CR
                 {
                     Logger = TsType.Variable("console", new JsLikeConsole()),
-                    LoggerClass = TsType.Class<JsLikeConsole>(),
                     Init = TsType.Function<Action<int, int>>("init",
                                                              (x, y) =>
                                                              {

@@ -202,10 +202,16 @@ lambda({testValues[1]})";
             public Shared<Func<Powers, int>> SquareAndCube;
             public Shared<Test> Test;
             public Shared<Action<int[]>> TakeArr;
+            public Shared<Type> TestType;
         }
         
         private struct Test
         {
+            public Test(int x)
+            {
+                this.x = x;
+            }
+            
             public int x;
             public int Bab
             {
@@ -230,6 +236,7 @@ lambda({testValues[1]})";
                     ClrTally = clrTally,
                     JsTally = TsType.Variable("tally", new List<int>()),
                     Test = TsType.Variable("test", new Test()),
+                    TestType = TsType.Class<Test>(nameof(Test)),
                     SquareAndCube = TsType.Function<Func<Powers, int>>("eval", powers =>
                     {
                         int result = (int)Math.Pow(powers.Root, powers.Exponent);
@@ -244,15 +251,19 @@ lambda({testValues[1]})";
             }
         }
         
+        
+        
         [Test]
         public void APIComplex()
         {
             var random = new Random();
             var testValues = new [] { random.Next(), random.Next() };
-            
+
             string testString = @$"
 take([3,2]);
 test.x = 3;
+const y = make_test(11);
+console.log(y.x);
 tally.add(eval({{ root: 2, exponent: 4 }}));
 take([1]);
 console.log(tally[1]);

@@ -1,13 +1,11 @@
 using System;
-using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     internal readonly struct MethodWrapper
-    {
+	{
         /// <summary>
         /// 
         /// </summary>
@@ -36,8 +34,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 		private readonly IClrToTsNameMapper mapper;
 
         public MethodWrapper(object source, MethodInfo methodInfo, IClrToTsNameMapper mapper) : this()
-        {
-			parameterTypes = methodInfo.GetParameters().Select(parameter => parameter.ParameterType).ToArray();
+		{
+			var parameters = methodInfo.GetParameters();
+			parameterTypes = parameters.Select(parameter => parameter.ParameterType).ToArray();
 			int paramsLength = parameterTypes.Length;
 			bool isAction = methodInfo.ReturnType == typeof(void);
 			Type methodType = isAction

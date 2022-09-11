@@ -7,11 +7,11 @@ using UnityEngine.Assertions;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public static class JaToClrConverter
+    public static class JsToClrConverter
     {
         private static readonly Dictionary<Type, DataMember[]> DataMembersByType;
         
-        static JaToClrConverter()
+        static JsToClrConverter()
         {
             DataMembersByType = new Dictionary<Type, DataMember[]>();
         }

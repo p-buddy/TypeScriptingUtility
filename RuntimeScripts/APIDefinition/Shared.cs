@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
@@ -14,7 +15,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             ClrObject = obj;
             TsType = tsType;
-            ClrType = obj.GetType();
+            ClrType = obj is Type type ? type : obj.GetType();
         }
         
         internal Shared(T obj, TsType tsType, object implementingObject)

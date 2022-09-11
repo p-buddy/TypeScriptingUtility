@@ -59,7 +59,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// </summary>
         /// <typeparam name="TType"></typeparam>
         /// <returns></returns>
-        public static Shared<Type> Class<TType>() => new(typeof(TType), new TsType(Specification.Class));
+        public static Shared<Type> Class<TType>(string name) => new(typeof(TType), new TsType(Specification.Class, name));
         
         /// <summary>
         /// 
