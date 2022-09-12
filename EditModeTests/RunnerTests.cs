@@ -236,7 +236,7 @@ lambda({testValues[1]})";
                     ClrTally = clrTally,
                     JsTally = TsType.Variable("tally", new List<int>()),
                     Test = TsType.Variable("test", new Test()),
-                    TestType = TsType.Class<Test>(nameof(Test)),
+                    TestType = TsType.Class<Test>("c"),
                     SquareAndCube = TsType.Function<Func<Powers, int>>("eval", powers =>
                     {
                         int result = (int)Math.Pow(powers.Root, powers.Exponent);
@@ -262,7 +262,9 @@ lambda({testValues[1]})";
             string testString = @$"
 take([3,2]);
 test.x = 3;
-const y = make_test(11);
+const y = new c(11);
+console.log('aaaa', y.x);
+y.x = 99;
 console.log(y.x);
 tally.add(eval({{ root: 2, exponent: 4 }}));
 take([1]);

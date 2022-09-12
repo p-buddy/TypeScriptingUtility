@@ -43,7 +43,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         static Engine Construct()
         {
             var engine = new Engine();
-            engine.SetValue("console", new JsLikeConsole());
+            var console = new JsLikeConsole().Wrap(ClrToTsNameMapper.PascalToCamelCase);
+            engine.SetValue("console", console);
             return engine;
         }
     }

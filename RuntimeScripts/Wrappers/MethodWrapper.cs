@@ -10,9 +10,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// 
         /// </summary>
         public Delegate Delegate { get; }
-
-		private const int CastMethodsCount = 17;
-
+		
 		private static readonly MethodInfo[] FuncMemberMethods;
         private static readonly MethodInfo[] ActionMemberMethods;
 
@@ -21,7 +19,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             static Type[] ArgTypes(int count) => Enumerable.Repeat(typeof(object), count).ToArray();
             static MethodInfo GetMethodForArgCount(string name, int count) =>
                 typeof(MethodWrapper).GetMethod(name, ArgTypes(count));
-            static MethodInfo[] GetMethods(string name) => Enumerable.Range(0, CastMethodsCount)
+            static MethodInfo[] GetMethods(string name) => Enumerable.Range(0, FunctionTypes.Count)
                                                                .Select(i => GetMethodForArgCount(name, i))
                                                                .ToArray();
 
@@ -35,32 +33,27 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
         public MethodWrapper(object source, MethodInfo methodInfo, IClrToTsNameMapper mapper) : this()
 		{
-			var parameters = methodInfo.GetParameters();
+			ParameterInfo[] parameters = methodInfo.GetParameters();
 			parameterTypes = parameters.Select(parameter => parameter.ParameterType).ToArray();
 			int paramsLength = parameterTypes.Length;
 			bool isAction = methodInfo.ReturnType == typeof(void);
+			// bool usesParams = paramsLength != 0 && UsesParams(parameters[paramsLength - 1]); TODO
 			Type methodType = isAction
-				? paramsLength == 0 ? GenericActionTypes[paramsLength] : GenericActionTypes[paramsLength].MakeGenericType(parameterTypes)
-				: GenericFuncTypes[paramsLength].MakeGenericType(parameterTypes.Append(methodInfo.ReturnType).ToArray());
+				? paramsLength == 0 ? FunctionTypes.GenericActions[paramsLength] : FunctionTypes.GenericActions[paramsLength].MakeGenericType(parameterTypes)
+				: FunctionTypes.GenericFunctions[paramsLength].MakeGenericType(parameterTypes.Append(methodInfo.ReturnType).ToArray());
 			wrappedDelegate = Delegate.CreateDelegate(methodType, source, methodInfo);
-			Type memberType = isAction ? NonSpecificActionTypes[paramsLength] : NonSpecificFuncTypes[paramsLength];
+			Type memberType = isAction ? FunctionTypes.ObjectActions[paramsLength] : FunctionTypes.ObjectFunctions[paramsLength];
 			MethodInfo method = isAction ? ActionMemberMethods[paramsLength] : FuncMemberMethods[paramsLength];
 			this.mapper = mapper;
 			Delegate = Delegate.CreateDelegate(memberType, this, method);
 		}
 
+		private static bool UsesParams(ParameterInfo parameter) => parameter.GetCustomAttributes(typeof(ParamArrayAttribute), false).Length > 0;
+
 		#region Generated Content
 
-		private static readonly Type[] GenericActionTypes = {  typeof(Action),  typeof(Action<>),  typeof(Action<,>),  typeof(Action<,,>),  typeof(Action<,,,>),  typeof(Action<,,,,>),  typeof(Action<,,,,,>),  typeof(Action<,,,,,,>),  typeof(Action<,,,,,,,>),  typeof(Action<,,,,,,,,>),  typeof(Action<,,,,,,,,,>),  typeof(Action<,,,,,,,,,,>),  typeof(Action<,,,,,,,,,,,>),  typeof(Action<,,,,,,,,,,,,>),  typeof(Action<,,,,,,,,,,,,,>),  typeof(Action<,,,,,,,,,,,,,,>),  typeof(Action<,,,,,,,,,,,,,,,>) };
-
-		private static readonly Type[] GenericFuncTypes = { typeof(Func<>), typeof(Func<,>), typeof(Func<,,>), typeof(Func<,,,>), typeof(Func<,,,,>), typeof(Func<,,,,,>), typeof(Func<,,,,,,>), typeof(Func<,,,,,,,>), typeof(Func<,,,,,,,,>), typeof(Func<,,,,,,,,,>), typeof(Func<,,,,,,,,,,>), typeof(Func<,,,,,,,,,,,>), typeof(Func<,,,,,,,,,,,,>), typeof(Func<,,,,,,,,,,,,,>), typeof(Func<,,,,,,,,,,,,,,>), typeof(Func<,,,,,,,,,,,,,,,>), typeof(Func<,,,,,,,,,,,,,,,,>) };
-
-		private static readonly Type[] NonSpecificActionTypes = {  typeof(Action),  typeof(Action<object>),  typeof(Action<object,object>),  typeof(Action<object,object,object>),  typeof(Action<object,object,object,object>),  typeof(Action<object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object,object,object,object,object,object,object>),  typeof(Action<object,object,object,object,object,object,object,object,object,object,object,object,object,object,object,object>) };
-
-		private static readonly Type[] NonSpecificFuncTypes = { typeof(Func<object>), typeof(Func<object,object>), typeof(Func<object,object,object>), typeof(Func<object,object,object,object>), typeof(Func<object,object,object,object,object>), typeof(Func<object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object,object,object,object,object,object,object>), typeof(Func<object,object,object,object,object,object,object,object,object,object,object,object,object,object,object,object,object>) };
-
 		#region Actions
-
+		// public void ActionCastAndInvoke(params object[] a) => wrappedDelegate.DynamicInvoke(a.As(parameterTypes[0], mapper)); TODO
 		public void ActionCastAndInvoke() => wrappedDelegate.DynamicInvoke();
 		public void ActionCastAndInvoke(object a) => wrappedDelegate.DynamicInvoke(a.As(parameterTypes[0], mapper));
 		public void ActionCastAndInvoke(object a, object b) => wrappedDelegate.DynamicInvoke(a.As(parameterTypes[0], mapper), b.As(parameterTypes[1], mapper));
@@ -104,6 +97,42 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 		#endregion Funcs
 
 		#endregion Generated Content
+		
+		#region Generation Code (Typescript)
+/*
+const indent1 = "\n\t\t";
+const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split("").slice(0, 16);
+
+const makeSignature = (opener: string, params: string, invocations: string) =>
+    `${opener}(${params}) => wrappedDelegate.DynamicInvoke(${invocations});`;
+
+const generateMethod = (opener: string) => {
+    const withParams = alphabet.map((_, index) => {
+        const all: string[] = [...alphabet].splice(0, index + 1);
+        const params = all.map(l => `object ${l}`).join(", ");
+        const invocations = all.map((l, i) => `${l}.As(parameterTypes[${i}], mapper)`).join(", ");
+        return makeSignature(opener, params, invocations);
+    });
+    return [makeSignature(opener, "", ""), ...withParams].join(indent1);
+};
+
+const actionMethod = 'public void ActionCastAndInvoke';
+const funcMethod = 'public object FuncCastAndInvoke';
+
+const content = `
+${indent1}#region Generated Content
+${indent1}#region Actions
+${indent1}${generateMethod(actionMethod)}
+${indent1}#endregion Actions
+${indent1}#region Funcs
+${indent1}${generateMethod(funcMethod)}
+${indent1}#endregion Funcs
+${indent1}#endregion Generated Content
+`;
+
+console.log(content);
+*/
+		#endregion
 
 	}
 }

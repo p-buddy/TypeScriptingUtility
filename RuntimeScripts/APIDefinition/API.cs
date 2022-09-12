@@ -38,6 +38,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                       .Select(AsLink)
                       .ToArray();
             
+            // need to check for duplicate names in JS world
+            
             #region Local Functions
             static bool IsFieldOrProperty(MemberInfo info) =>
                 info.MemberType == MemberTypes.Field || info.MemberType == MemberTypes.Property;

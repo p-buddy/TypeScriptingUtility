@@ -8,8 +8,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     internal readonly struct FieldAndPropertyWrapper
     {
-        const int DefaultIndexCount = 100;
-        
         private readonly object parent;
         private readonly FieldInfo field;
         private readonly PropertyInfo property;
@@ -17,9 +15,18 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         private readonly string name;
         private readonly IClrToTsNameMapper mapper;
         private readonly bool isIndexer;
+
         private object CurrentValue =>
             field?.GetValue(parent) ??
-            (isIndexer ? null : property.GetValue(parent));
+            (!isIndexer
+                ? property.GetValue(parent)
+                : throw new Exception($"{name}, an index-able property, can not be accessed directly. Use brackets ('[]') instead."));
+
+        public object this[int i]
+        {
+            get => property.GetValue(parent, new object[] { i });
+            set { property.SetValue(parent, value, new object[] { i }); }
+        }
 
         private FieldAndPropertyWrapper(object parent,
                                         ExpandoObject expando,
@@ -41,14 +48,15 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 return;
             }
 
-            // Overall, this code is bananas!! Hopefully not too many indexable types will need to be passed around
+            name = "indexer";
+            // Overall, this code is bananas!! Hopefully not too many indexable types will need to be passed around.
+            // NOTE: A limitation of this code is that, if what can be indexed changes (i.e. the length of a list increases),
+            // then they won't be able to be indexed.
             for (int i = 0; i < Int32.MaxValue; i++)
             {
                 try { expando.Add($"{i}", property.GetValue(parent, new object[] { i })); } 
                 catch { break; }
             }
-
-            name = "indexer";
         }
 
         public FieldAndPropertyWrapper(object parent, FieldInfo field, ExpandoObject expando, IClrToTsNameMapper mapper) :

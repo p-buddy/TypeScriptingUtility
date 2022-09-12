@@ -12,21 +12,18 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// 
         /// </summary>
         /// <param name="messages"></param>
-        // ReSharper disable once InconsistentNaming
-        public void log(params object[] messages) => messages.ToList().ForEach(Debug.Log);
+        public void Log(params object[] messages) => messages.ToList().ForEach(Debug.Log);
         
         /// <summary>
         /// 
         /// </summary>
         /// <param name="messages"></param>
-        // ReSharper disable once InconsistentNaming
-        public void error(params object[] messages) => messages.ToList().ForEach(Debug.LogError);
+        public void Error(params object[] messages) => messages.ToList().ForEach(Debug.LogError);
         
         /// <summary>
         /// 
         /// </summary>
         /// <param name="messages"></param>
-        // ReSharper disable once InconsistentNaming
-        public void warn(params object[] messages) => messages.ToList().ForEach(Debug.LogWarning);
+        public void Warn(params object[] messages) => messages.ToList().ForEach(Debug.LogWarning);
     }
 }

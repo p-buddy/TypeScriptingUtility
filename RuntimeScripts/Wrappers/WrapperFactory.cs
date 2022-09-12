@@ -11,11 +11,38 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public static class WrapperFactory
     {
+        public static MethodInfo WrapTypeMethod { get; }
+        public static MethodInfo WrapObjectMethod { get; }
+
+        static WrapperFactory()
+        {
+            MethodInfo[] wrapMethods = typeof(WrapperFactory).GetMethods()
+                                                             .Where(method => method.Name == nameof(Wrap))
+                                                             .ToArray();
+
+            WrapTypeMethod = FindMatchingParameterType(wrapMethods, typeof(Type));
+            WrapObjectMethod = FindMatchingParameterType(wrapMethods, typeof(object));
+            
+            static MethodInfo FindMatchingParameterType(IEnumerable<MethodInfo> methods, Type type)
+            {
+                return methods.First(method => method.GetParameters()[0].ParameterType == type);
+            }
+        }
+        
         internal static void Add<T>(this ExpandoObject expando, string name, T value) => 
             ((IDictionary<string, object>)expando)[name] = value;
         
         internal static object Get(this ExpandoObject expando, string name) => ((IDictionary<string, object>)expando)[name];
         private static string MappedName(this MemberInfo member, IClrToTsNameMapper mapper) => mapper.MapToTs(member.Name);
+        
+        private static MemberInfo[] GetWrappedMembers(this Type type) =>
+            type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        
+        public static TypeWrapper Wrap(this Type type, IClrToTsNameMapper nameMapper = null)
+        {
+            MemberInfo[] members = type.GetWrappedMembers();
+            return new TypeWrapper(type, members, nameMapper);
+        }
 
         public static object Wrap(this object obj, IClrToTsNameMapper nameMapper = null)
         {
@@ -25,9 +52,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 MethodInfo methodInfo = del.GetMethodInfo();
                 return new MethodWrapper(target, methodInfo, nameMapper).Delegate;
             }
-            
+
             Type type = obj.GetType();
-            MemberInfo[] members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            MemberInfo[] members = type.GetWrappedMembers();
             ExpandoObject expando = new ExpandoObject();
             var fieldAndPropertyWrappers = new List<FieldAndPropertyWrapper>();
             

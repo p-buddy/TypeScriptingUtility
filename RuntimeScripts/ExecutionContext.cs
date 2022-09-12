@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Jint;
 using Jint.Runtime.Interop;
 using pbuddy.TypeScriptingUtility.EditorScripts;
@@ -29,36 +31,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             engine.SetValue(name, item);
         }
-        
-        /*
-         * class TypescriptClass {
-         *  internal: any;
-         * 
-         *  constructor(arg1, arg2) {
-         *      this.internal = make_internal(arg1, arg2);
-         *  }
-         *
-         *  someFunction(arg1) {
-         *      internal.someFunction(arg1);
-         *  }
-         * }
-         */
 
-        public void AddType(string name, Type type, IClrToTsNameMapper nameMapper)
+        public void AddType(string name, TypeWrapper wrappedType)
         {
-            ConstructorInfo[] constructors = type.GetConstructors();
-            if (constructors.Length > 1)
+            foreach (KeyValuePair<string, object> global in wrappedType.GetGlobalsToAdd(name))
             {
-                var error = $"In order to add a type to an ${nameof(API<object>)}, it can only have a single public declared constructor.";
-                var specifics = $"The type {type.Name} had ${constructors.Length} public declared constructors";
-                throw new Exception($"${error} ${specifics}");
+                engine.SetValue(global.Key, global.Value);
             }
-
-            ConstructorInfo constructor = constructors.Length == 1 ? constructors[0] : type.GetConstructor(Type.EmptyTypes);
-
-            Delegate constructorDelegate = new ConstructorWrapper(constructor, nameMapper).Delegate;
-            var obj = constructorDelegate.DynamicInvoke(4);
-            engine.SetValue($"make_{name}", constructorDelegate);
+            engine.Execute(wrappedType.GetClassDeclaration(name));
         }
 
         public void ApplyAPI<T>(API<T> api)
@@ -70,7 +50,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 link.TsType.Match(new TsType.Matcher.Action
                 {
                     OnVariable = () => AddVariable(name, link.NonSpecificClrObject.Wrap(api.NameMapper)),
-                    OnClass = () => AddType(name, link.ClrType, api.NameMapper),
+                    OnClass = () => AddType(name, link.ClrType.Wrap(api.NameMapper)),
                     OnFunction = () => AddFunction(name, link.NonSpecificClrObject.Wrap(api.NameMapper))
                 });
             } 
