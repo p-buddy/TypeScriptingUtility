@@ -10,7 +10,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// <summary>
         /// 
         /// </summary>
-        public Delegate Delegate { get; }
+        public System.Delegate Delegate { get; }
 		
 		private static readonly MethodInfo[] FuncMemberMethods;
         private static readonly MethodInfo[] ActionMemberMethods;
@@ -27,7 +27,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 			FuncWithParamsMemberMethods = self.GetMatchingMethods(nameof(ParamsFuncCastAndInvoke), true);
 		}
         
-        private readonly Delegate wrappedDelegate;
+        private readonly System.Delegate wrappedDelegate;
         private readonly Type[] parameterTypes;
 		private readonly IClrToTsNameMapper mapper;
 
@@ -62,11 +62,11 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 				? genericMethodCollection[paramsLength]
 				: genericMethodCollection[paramsLength].MakeGenericType(genericParams);
 			
-			wrappedDelegate = Delegate.CreateDelegate(methodType, source, methodInfo);
+			wrappedDelegate = System.Delegate.CreateDelegate(methodType, source, methodInfo);
 			Type memberType = objectMethodCollection[paramsLength];
 			MethodInfo method = memberMethodCollection[paramsLength];
 			this.mapper = mapper;
-			Delegate = Delegate.CreateDelegate(memberType, this, method);
+			Delegate = System.Delegate.CreateDelegate(memberType, this, method);
 		}
 		#region Generated Content
 

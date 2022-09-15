@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -207,9 +208,9 @@ lambda({testValues[1]})";
         
         private struct Test
         {
-            public Test(int x)
+            public Test(int all)
             {
-                this.x = x;
+                x = all;
             }
             
             public int x;
@@ -262,7 +263,7 @@ lambda({testValues[1]})";
             string testString = @$"
 take([3,2]);
 test.x = 3;
-const y = new c(11);
+const y = new c(90);
 console.log('aaaa', y.x);
 y.x = 99;
 console.log(y.x);

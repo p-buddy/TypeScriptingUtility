@@ -8,11 +8,21 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public readonly struct TypeWrapper
     {
-        public ConstructorWrapper Constructor { get; }
+        private static readonly MethodInfo CreateInstanceMethod;
+
+        static TypeWrapper()
+        {
+            CreateInstanceMethod = typeof(TypeWrapper).GetMatchingMethods(nameof(CreateInstance))[0];
+        }
+
+        private readonly Type type;
+        public Delegate ConstructorConstructorWrapper { get; }
         public Dictionary<string, MemberInfo> MembersByName { get; }
 
-        public TypeWrapper(Type type, MemberInfo[] members, IClrToTsNameMapper nameMapper)
+        public TypeWrapper(Type type, MemberInfo[] members, IClrToTsNameMapper nameMapper): this()
         {
+            this.type = type;
+            
             ConstructorInfo[] constructors = type.GetConstructors();
             if (constructors.Length > 1)
             {
@@ -24,7 +34,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             ConstructorInfo constructorInfo = constructors.Length == 1
                 ? constructors[0]
                 : type.GetConstructor(Type.EmptyTypes);
-            Constructor = new ConstructorWrapper(constructorInfo, nameMapper);
+            ConstructorConstructorWrapper = constructorInfo is null 
+                ? new MethodWrapper(this, CreateInstanceMethod, nameMapper).Delegate
+                : new ConstructorWrapper(constructorInfo, nameMapper).Delegate;
             
             MembersByName = new Dictionary<string, MemberInfo>();
             foreach (MemberInfo member in members)
@@ -33,11 +45,13 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             }
         }
 
+        public object CreateInstance() => Activator.CreateInstance(type);
+
         public Dictionary<string, object> GetGlobalsToAdd(string name)
         {
             return new Dictionary<string, object>
             {
-                { InternalConstructorName(name), Constructor.Delegate }
+                { InternalConstructorName(name), ConstructorConstructorWrapper }
             };
         }
 

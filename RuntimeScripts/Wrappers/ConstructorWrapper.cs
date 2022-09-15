@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -20,6 +19,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
 		public Delegate Delegate { get; }
 		private readonly Delegate lambdaDelegate;
+		private readonly IClrToTsNameMapper mapper;
 
 		public ConstructorWrapper(ConstructorInfo info, IClrToTsNameMapper mapper): this()
         {
@@ -29,22 +29,26 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             ParameterExpression[] expressionParameters = new ParameterExpression[parameters.Length];
             Expression[] castedParameters = new Expression[parameters.Length];
             
-            for (var index = 0; index < parameters.Length; index++)
+			bool containsParams = parameters.Length > 0 && parameters[^1].UsesParams();
+			for (var index = 0; index < parameters.Length; index++)
             {
                 Type type = parameters[index].ParameterType;
-                ParameterExpression expressionParameter = Expression.Parameter(typeof(object));
+				ParameterExpression expressionParameter = index == parameters.Length - 1 && containsParams
+					? Expression.Parameter(typeof(object[]))
+					: Expression.Parameter(typeof(object));
                 Expression[] callParams = { expressionParameter, Expression.Constant(type), mapperConstant };
                 expressionParameters[index] = expressionParameter;
                 castedParameters[index] = Expression.Convert(Expression.Call(AsMethod, callParams), type);
 			}
 
-			bool containsParams = parameters.Length > 0 && parameters[^1].UsesParams();
 			Type methodType = containsParams
 				? FunctionTypes.ObjectFunctionsWithParams[parameters.Length]
 				: FunctionTypes.ObjectFunctions[parameters.Length];
 			MethodInfo method = containsParams
 				? InvokeMethodsWithParams[parameters.Length]
 				: InvokeMethods[parameters.Length];
+
+			this.mapper = mapper;
 			
             NewExpression construct = Expression.New(info, castedParameters);
             MethodCallExpression wrapped = Expression.Call(WrapperFactory.WrapObjectMethod, Expression.Convert(construct, typeof(object)), mapperConstant);
@@ -53,43 +57,42 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 			Delegate = Delegate.CreateDelegate(methodType, this, method);
 		}
         
-#region Generated Content
-
+		#region Generated Content
 		public object Invoke() => lambdaDelegate.DynamicInvoke();
-		public object Invoke(object a) => lambdaDelegate.DynamicInvoke(a);
-		public object Invoke(object a, object b) => lambdaDelegate.DynamicInvoke(a, b);
-		public object Invoke(object a, object b, object c) => lambdaDelegate.DynamicInvoke(a, b, c);
-		public object Invoke(object a, object b, object c, object d) => lambdaDelegate.DynamicInvoke(a, b, c, d);
-		public object Invoke(object a, object b, object c, object d, object e) => lambdaDelegate.DynamicInvoke(a, b, c, d, e);
-		public object Invoke(object a, object b, object c, object d, object e, object f) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m, n);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, object o) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o);
-		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, object o, object p) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
+		public object Invoke(object a) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper));
+		public object Invoke(object a, object b) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object), mapper), n.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, object o) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object), mapper), n.As(typeof(object), mapper), o.As(typeof(object), mapper));
+		public object Invoke(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, object o, object p) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object), mapper), n.As(typeof(object), mapper), o.As(typeof(object), mapper), p.As(typeof(object), mapper));
 
 		public object InvokeWithParams() => lambdaDelegate.DynamicInvoke();
-		public object InvokeWithParams(params object[] a) => lambdaDelegate.DynamicInvoke(a);
-		public object InvokeWithParams(object a, params object[] b) => lambdaDelegate.DynamicInvoke(a, b);
-		public object InvokeWithParams(object a, object b, params object[] c) => lambdaDelegate.DynamicInvoke(a, b, c);
-		public object InvokeWithParams(object a, object b, object c, params object[] d) => lambdaDelegate.DynamicInvoke(a, b, c, d);
-		public object InvokeWithParams(object a, object b, object c, object d, params object[] e) => lambdaDelegate.DynamicInvoke(a, b, c, d, e);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, params object[] f) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, params object[] g) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, params object[] h) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, params object[] i) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, params object[] j) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, params object[] k) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, params object[] l) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, params object[] m) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, params object[] n) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m, n);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, params object[] o) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o);
-		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, object o, params object[] p) => lambdaDelegate.DynamicInvoke(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
+		public object InvokeWithParams(params object[] a) => lambdaDelegate.DynamicInvoke(a.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, params object[] b) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, params object[] c) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, params object[] d) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, params object[] e) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, params object[] f) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, params object[] g) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, params object[] h) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, params object[] i) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, params object[] j) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, params object[] k) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, params object[] l) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, params object[] m) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, params object[] n) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object), mapper), n.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, params object[] o) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object), mapper), n.As(typeof(object), mapper), o.As(typeof(object[]), mapper));
+		public object InvokeWithParams(object a, object b, object c, object d, object e, object f, object g, object h, object i, object j, object k, object l, object m, object n, object o, params object[] p) => lambdaDelegate.DynamicInvoke(a.As(typeof(object), mapper), b.As(typeof(object), mapper), c.As(typeof(object), mapper), d.As(typeof(object), mapper), e.As(typeof(object), mapper), f.As(typeof(object), mapper), g.As(typeof(object), mapper), h.As(typeof(object), mapper), i.As(typeof(object), mapper), j.As(typeof(object), mapper), k.As(typeof(object), mapper), l.As(typeof(object), mapper), m.As(typeof(object), mapper), n.As(typeof(object), mapper), o.As(typeof(object), mapper), p.As(typeof(object[]), mapper));
 
 		#endregion Generated Content
 		
