@@ -208,9 +208,9 @@ lambda({testValues[1]})";
         
         private struct Test
         {
-            public Test(int all)
+            public Test(params int[] all)
             {
-                x = all;
+                x = all.Sum();
             }
             
             public int x;
@@ -263,7 +263,7 @@ lambda({testValues[1]})";
             string testString = @$"
 take([3,2]);
 test.x = 3;
-const y = new c(90);
+const y = new c(90, 1, 2);
 console.log('aaaa', y.x);
 y.x = 99;
 console.log(y.x);

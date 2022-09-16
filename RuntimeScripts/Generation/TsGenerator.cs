@@ -14,9 +14,9 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 {
     public static class TsGenerator
     {
-        private struct LinkSorter : IComparer<ILink>
+        private struct LinkSorter : IComparer<IShared>
         {
-            public int Compare(ILink x, ILink y)
+            public int Compare(IShared x, IShared y)
             {
                 if (x.TsType.Spec == TsType.Specification.Class) return -1;
                 if (y.TsType.Spec == TsType.Specification.Class) return 1;
@@ -32,10 +32,10 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         public static string Content(IAPI api)
         {
             Dictionary<Type, TsDeclaration> typeMap = new Dictionary<Type, TsDeclaration>();
-            List<ILink> links = api.Links.ToList();
+            List<IShared> links = api.Links.ToList();
             links.Sort(new LinkSorter());
             StringBuilder builder = new StringBuilder(links.Count);
-            foreach (ILink link in links)
+            foreach (IShared link in links)
             {
                 string declaration = link.TsType.Match(new TsType.Matcher.Func<string>
                 {
@@ -61,13 +61,13 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             return builder.ToString();
         }
 
-        private static string GenerateFunctionDeclaration(ILink link, Dictionary<Type, TsDeclaration> typeMap)
+        private static string GenerateFunctionDeclaration(IShared shared, Dictionary<Type, TsDeclaration> typeMap)
         {
-            MethodInfo method = (link.NonSpecificClrObject as MulticastDelegate)?.Method ?? throw new Exception("");
+            MethodInfo method = (shared.NonSpecificClrObject as MulticastDelegate)?.Method ?? throw new Exception("");
             List<ParameterInfo> parameters = method.GetParameters().ToList();
             ParameterInfo @return = method.ReturnParameter;
 
-            string name = link.TsType.Name;
+            string name = shared.TsType.Name;
             string argsText = String.Join(", ", parameters.Select(GetParameterName));
             string paramsText = String.Join(", ", parameters.Select(GetParameterDeclaration));
             
@@ -82,14 +82,14 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             string GetParameterDeclaration(ParameterInfo param) => $"{param.Name}: {TsParam(param)}";
         }
         
-        private static string GenerateVariableDeclaration(ILink link, Dictionary<Type, TsDeclaration> typeMap)
+        private static string GenerateVariableDeclaration(IShared shared, Dictionary<Type, TsDeclaration> typeMap)
         {
-            string name = link.TsType.Name;
-            return $"{ExportConst} {name}: {link.ClrType.TsName(typeMap)} = {TsType.Internalize(name)};";
+            string name = shared.TsType.Name;
+            return $"{ExportConst} {name}: {shared.ClrType.TsName(typeMap)} = {TsType.Internalize(name)};";
         }
 
 
-        private static string GenerateClassDeclaration(ILink link, Dictionary<Type, TsDeclaration> typeMap)
+        private static string GenerateClassDeclaration(IShared shared, Dictionary<Type, TsDeclaration> typeMap)
         {
             // TODO
             return "";

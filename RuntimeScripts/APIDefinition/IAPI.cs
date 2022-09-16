@@ -4,6 +4,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     {
         IClrToTsNameMapper NameMapper { get; }
 
-        ILink[] Links { get; }
+        IShared[] Links { get; }
     }
 }

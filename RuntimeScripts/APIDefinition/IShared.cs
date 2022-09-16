@@ -2,7 +2,7 @@ using System;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public interface ILink
+    public interface IShared
     {
         TsType TsType { get; }
         Type ClrType { get; }

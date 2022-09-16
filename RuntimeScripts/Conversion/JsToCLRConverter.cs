@@ -15,7 +15,15 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             DataMembersByType = new Dictionary<Type, DataMember[]>();
         }
-
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="type"></param>
+        /// <param name="mapper"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public static object As(this object obj, Type type, IClrToTsNameMapper mapper = null)
         {
             try
@@ -47,30 +55,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             throw new Exception($"Uh oh! Unhandled case for casting {obj} to type {type}.");
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="mapper"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static T To<T>(ExpandoObject obj, IClrToTsNameMapper mapper = null) where T : new()
-        {
-            return (T)To(obj, typeof(T), _ => new T(), mapper);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="type"></param>
-        /// <param name="obj"></param>
-        /// <param name="mapper"></param>
-        /// <returns></returns>
-        public static object To(Type type, ExpandoObject obj, IClrToTsNameMapper mapper = null)
-        {
-            return To(obj, type, Activator.CreateInstance, mapper);
-        }
-        
         /// <summary>
         /// 
         /// </summary>

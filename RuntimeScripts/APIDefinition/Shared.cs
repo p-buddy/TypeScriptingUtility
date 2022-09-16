@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public readonly struct Shared<T> : ILink
+    public readonly struct Shared<T> : IShared
     {
         public T ClrObject { get; }
         public TsType TsType { get; }

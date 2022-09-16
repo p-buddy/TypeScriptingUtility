@@ -8,23 +8,23 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     public abstract class API<TExecutionDomain> : IAPI
     {
         private bool defined;
-        private TExecutionDomain globals;
+        private TExecutionDomain domain;
 
         public TExecutionDomain Domain
         {
             get
             {
-                globals = defined ? globals : Define();
+                domain = defined ? domain : Define();
                 defined = true;
-                return globals;
+                return domain;
             }
         }
 
         public virtual IClrToTsNameMapper NameMapper => ClrToTsNameMapper.Default;
-        public ILink[] Links => RetrieveTsRootTypes(Domain);
+        public IShared[] Links => RetrieveTsRootTypes(Domain);
         protected abstract TExecutionDomain Define();
 
-        private ILink[] RetrieveTsRootTypes(TExecutionDomain obj)
+        private IShared[] RetrieveTsRootTypes(TExecutionDomain obj)
         {
             const BindingFlags flags = BindingFlags.Public |
                                        BindingFlags.NonPublic |
@@ -36,25 +36,24 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                       .Where(IsFieldOrProperty)
                       .Where(IsLink)
                       .Select(AsLink)
-                      .ToArray();
-            
-            // need to check for duplicate names in JS world
-            
+                      .ToArray()
+                      .ValidateSharedValues();
+
             #region Local Functions
             static bool IsFieldOrProperty(MemberInfo info) =>
                 info.MemberType == MemberTypes.Field || info.MemberType == MemberTypes.Property;
 
             static bool IsLink(MemberInfo info) =>
-                typeof(ILink).IsAssignableFrom(info.MemberType == MemberTypes.Field
+                typeof(IShared).IsAssignableFrom(info.MemberType == MemberTypes.Field
                                                    ? (info as FieldInfo)?.FieldType
                                                    : (info as PropertyInfo)?.PropertyType);
 
-            ILink AsLink(MemberInfo info)
+            IShared AsLink(MemberInfo info)
             {
                 return info.MemberType switch
                 {
-                    MemberTypes.Field => (info as FieldInfo)?.GetValue(obj) as ILink,
-                    MemberTypes.Property => (info as PropertyInfo)?.GetValue(obj) as ILink,
+                    MemberTypes.Field => (info as FieldInfo)?.GetValue(obj) as IShared,
+                    MemberTypes.Property => (info as PropertyInfo)?.GetValue(obj) as IShared,
                     _ => throw new Exception()
                 };
             }

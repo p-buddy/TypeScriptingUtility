@@ -43,8 +43,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
         public void ApplyAPI<T>(API<T> api)
         {
-            ILink[] links = api.Links;
-            foreach (ILink link in links)
+            IShared[] links = api.Links;
+            foreach (IShared link in links)
             {
                 string name = api.NameMapper.MapToTs(link.TsType.Name);
                 link.TsType.Match(new TsType.Matcher.Action
