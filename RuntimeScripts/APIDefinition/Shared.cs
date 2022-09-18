@@ -1,28 +1,25 @@
 using System;
-using System.Runtime.CompilerServices;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public readonly struct Shared<T> : IShared
     {
-        public T ClrObject { get; }
+        public T ClrObject => (T)clrObject;
+
+        private readonly object clrObject;
         public TsType TsType { get; }
         public Type ClrType { get; }
         
-        public object NonSpecificClrObject => ClrObject;
+        public object NonSpecificClrObject => clrObject;
         
         internal Shared(T obj, TsType tsType)
         {
-            ClrObject = obj;
+            clrObject = obj;
             TsType = tsType;
             ClrType = obj is Type type ? type : obj.GetType();
-        }
-        
-        internal Shared(T obj, TsType tsType, object implementingObject)
-        {
-            ClrObject = obj;
-            TsType = tsType;
-            ClrType = obj.GetType();
         }
     }
 }

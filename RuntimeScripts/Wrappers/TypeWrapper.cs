@@ -26,7 +26,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             ConstructorInfo[] constructors = type.GetConstructors();
             if (constructors.Length > 1)
             {
-                var error = $"In order to add a type to an ${nameof(API<object>)}, it can only have a single public declared constructor.";
+                var error = $"In order to add a type to an ${nameof(APIBase<object>)}, it can only have a single public declared constructor.";
                 var specifics = $"The type {type.Name} had ${constructors.Length} public declared constructors";
                 throw new Exception($"${error} ${specifics}");
             }

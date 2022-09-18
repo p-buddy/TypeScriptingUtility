@@ -6,6 +6,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
   public static class TsPrimitives
   {
+    public static bool IsTsPrimitive(this Type type) => ClrToJs.ContainsKey(type);
     public static bool TryGetTsName(Type type, out string name)
     {
       Type queryType = type.IsArray ? type.GetElementType() : type;

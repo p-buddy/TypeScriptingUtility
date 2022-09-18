@@ -28,7 +28,7 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
         {
             string testString = "This is a javascript log!";
             LogAssert.Expect(LogType.Log, testString);
-            JsRunner.ExecuteString($"console.log([\"{testString}\"])");
+            JsRunner.ExecuteString($"console.log(\"{testString}\")");
         }
         
         [Test]
@@ -156,7 +156,7 @@ console.log({Quotient.MemberNames});
             public Shared<Action<int>> AppendNumberLambda;
         }
 
-        private class MyAPI : API<Globals>
+        private class MyAPI : APIBase<Globals>
         {
             protected override Globals Define()
             {
@@ -225,7 +225,7 @@ lambda({testValues[1]})";
             }
         }
 
-        private class RealisticAPI : API<Real>
+        private class RealisticAPI : APIBase<Real>
         {
             public override IClrToTsNameMapper NameMapper => ClrToTsNameMapper.PascalToCamelCase;
 

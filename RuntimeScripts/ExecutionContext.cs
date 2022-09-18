@@ -41,9 +41,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             engine.Execute(wrappedType.GetClassDeclaration(name));
         }
 
-        public void ApplyAPI<T>(API<T> api)
+        public void ApplyAPI<T>(APIBase<T> api)
         {
-            IShared[] links = api.Links;
+            IShared[] links = api.Shared;
             foreach (IShared link in links)
             {
                 string name = api.NameMapper.MapToTs(link.TsType.Name);

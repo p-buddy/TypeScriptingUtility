@@ -14,140 +14,133 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 {
     public static class TsGenerator
     {
-        private struct LinkSorter : IComparer<IShared>
-        {
-            public int Compare(IShared x, IShared y)
-            {
-                if (x.TsType.Spec == TsType.Specification.Class) return -1;
-                if (y.TsType.Spec == TsType.Specification.Class) return 1;
-                return 0;
-            }
-        }
+        public const string ExportConst = "export const";
+        public const string TsIgnore = "// @ts-ignore";
         
-        private const string ExportConst = "export const";
-        private const string TsIgnore = "// @ts-ignore";
-
-        public static BindingFlags PermissiveFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static;
-
         public static string Content(IAPI api)
         {
             Dictionary<Type, TsDeclaration> typeMap = new Dictionary<Type, TsDeclaration>();
-            List<IShared> links = api.Links.ToList();
-            links.Sort(new LinkSorter());
-            StringBuilder builder = new StringBuilder(links.Count);
-            foreach (IShared link in links)
+            IShared[] shared = api.Shared;
+
+            Dictionary<Type, string> classNamesByType = shared.Where(s => s.TsType.Spec == TsType.Specification.Class)
+                                                              .ToDictionary(s => s.ClrType, s => s.TsType.Name);
+            
+            string GetClassName(Type type) => classNamesByType.TryGetValue(type, out string name) ? name : null;
+
+            var types = shared.RetrieveNestedTypes();
+            StringBuilder builder = new StringBuilder(shared.Length + types.Count);
+
+            foreach (Type type in types)
             {
-                string declaration = link.TsType.Match(new TsType.Matcher.Func<string>
+                var declaration = new TsDeclaration(type, GetClassName, api.NameMapper);
+                if (declaration.Declaration is not null) builder.Append(declaration.Declaration);
+                typeMap[type] = declaration;
+            }
+
+            foreach (IShared share in shared)
+            {
+                string declaration = share.TsType.Match(new TsType.Matcher.Func<string>
                 {
-                    OnVariable = () => GenerateVariableDeclaration(link, typeMap),
-                    OnClass = () => GenerateClassDeclaration(link, typeMap),
-                    OnFunction = () => GenerateFunctionDeclaration(link, typeMap)
+                    OnVariable = () => new TsVariable(share, typeMap).Declaration,
+                    OnClass = () => new TsClass(share, typeMap).Declaration,
+                    OnFunction = () => new TsFunction(share, typeMap).Declaration
                 });
 
-                if (declaration is null) continue;
                 builder.Append(declaration);
             }
 
-            foreach (KeyValuePair<Type, TsDeclaration> kvp in typeMap)
-            {
-                AddDependencies(kvp.Key, typeMap);
-            }
-
-            foreach (KeyValuePair<Type, TsDeclaration> kvp in typeMap.Where(kvp => kvp.Value.NeedsDeclaration))
-            {
-                //builder.Append(GenerateInterfaceOrEnumDeclaration());
-            }
-            
             return builder.ToString();
         }
 
-        private static string GenerateFunctionDeclaration(IShared shared, Dictionary<Type, TsDeclaration> typeMap)
+        private static HashSet<Type> RetrieveNestedTypes(this IShared[] allShared)
+        {
+            HashSet<Type> nestedTypes = new HashSet<Type>();
+            foreach (IShared shared in allShared)
+            {
+                switch (shared.TsType.Spec)
+                {
+                    case TsType.Specification.Class:
+                        RetrieveNestedTypes(shared.ClrType, nestedTypes);
+                        break;
+                    case TsType.Specification.Function:
+                        foreach (Type type in ExtractTypesFromFunction(shared))
+                        {
+                            RetrieveNestedTypes(type, nestedTypes);
+                        }
+                        break;
+                    case TsType.Specification.Variable:
+                        RetrieveNestedTypes(shared.ClrType, nestedTypes);
+                        break;
+                }
+            }
+
+            return nestedTypes;
+        }
+
+        private static Type[] ExtractTypesFromFunction(IShared shared)
         {
             MethodInfo method = (shared.NonSpecificClrObject as MulticastDelegate)?.Method ?? throw new Exception("");
-            List<ParameterInfo> parameters = method.GetParameters().ToList();
-            ParameterInfo @return = method.ReturnParameter;
-
-            string name = shared.TsType.Name;
-            string argsText = String.Join(", ", parameters.Select(GetParameterName));
-            string paramsText = String.Join(", ", parameters.Select(GetParameterDeclaration));
-            
-            return @$"
-{ExportConst} {name} = ({paramsText}): {TsParam(@return)} => {{
-    {TsIgnore}
-    return {TsType.Internalize(name)}({argsText});
-}};";
-
-            string TsParam(ParameterInfo param) => param.ParameterType.TsName(typeMap);
-            string GetParameterName(ParameterInfo param) => param.Name;
-            string GetParameterDeclaration(ParameterInfo param) => $"{param.Name}: {TsParam(param)}";
-        }
-        
-        private static string GenerateVariableDeclaration(IShared shared, Dictionary<Type, TsDeclaration> typeMap)
-        {
-            string name = shared.TsType.Name;
-            return $"{ExportConst} {name}: {shared.ClrType.TsName(typeMap)} = {TsType.Internalize(name)};";
-        }
-
-
-        private static string GenerateClassDeclaration(IShared shared, Dictionary<Type, TsDeclaration> typeMap)
-        {
-            // TODO
-            return "";
-        }
-        
-        private static void AddDependencies(this Type type, Dictionary<Type, TsDeclaration> typeMap)
-        {
-            
-        }
-
-        private static string TsName(this Type type, Dictionary<Type, TsDeclaration> typeMap)
-        {
-            if (TsPrimitives.TryGetTsName(type, out string name))
+            ParameterInfo[] parameters = method.GetParameters();
+            Type returnType = method.ReturnType;
+            Type[] types = new Type[parameters.Length + (returnType == typeof(void) ? 0 : 1)];
+            for (int i = 0; i < types.Length; i++)
             {
-                return name;
-            }
-            
-            if (typeMap.TryGetValue(type, out TsDeclaration declaration))
-            {
-                return declaration.Name;
+                types[i] = i == parameters.Length ? returnType : parameters[i].ParameterType;
             }
 
-            if (TryGetTsName(type, out name))
-            {
-                typeMap[type] = new TsDeclaration(name);
-                return name;
-            }
-
-            throw new Exception();
+            return types;
         }
 
-        private static bool TryGetTsName(this Type type, out string name)
+        private static void RetrieveNestedTypes(Type type, HashSet<Type> types, bool dtoOnly = false)
         {
+            if (type is null || types.Contains(type) || type.IsTsPrimitive()) return;
+            
+            types.Add(type);
+
+            if (type.IsEnum) return;
+
             if (type.IsArray)
             {
-                
-            }
-            else if (type.IsEnum)
-            {
-                // Needs Checking
-                name = type.Name;
-                return true;
-            }
-            else if (type.IsGenericType)
-            {
-                // TODO
-                name = null;
-                return false;
-            }
-            else
-            {
-                name = type.Name;
-                return true;
+                RetrieveNestedTypes(type.GetElementType(), types, true);
+                return;
             }
 
-            name = null;
-            return false;
+            const BindingFlags flags = BindingFlags.Public |
+                                       BindingFlags.Instance |
+                                       BindingFlags.DeclaredOnly;
+
+            static bool IsCorrectMemberType(MemberInfo info, bool dtoOnly)
+            {
+                return info.MemberType switch
+                {
+                    MemberTypes.Field => true,
+                    MemberTypes.Property => true,
+                    MemberTypes.Method => !dtoOnly,
+                    _ => false
+                };
+            }
+
+            var relevantMembers = type.GetMembers(flags).Where(info => IsCorrectMemberType(info, dtoOnly));
+            foreach (MemberInfo member in relevantMembers.ToArray())
+            {
+                switch (member.MemberType)
+                {
+                    case MemberTypes.Field:
+                        RetrieveNestedTypes((member as FieldInfo)?.FieldType, types, true);
+                        break;
+                    case MemberTypes.Property:
+                        RetrieveNestedTypes((member as PropertyInfo)?.PropertyType, types, true);
+                        break;
+                    case MemberTypes.Method:
+                        var method = member as MethodInfo ?? throw new Exception();
+                        foreach (var parameter in method.GetParameters())
+                        {
+                            RetrieveNestedTypes(parameter.ParameterType, types, true);
+                        }
+                        RetrieveNestedTypes(method.ReturnType, types, true);
+                        break;
+                }
+            }
         }
-        
     }
 }

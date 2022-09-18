@@ -20,7 +20,7 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
             public Shared<Action<int, int>> Init;
         }
 
-        private class MyAPI : API<CR>
+        private class MyAPI : APIBase<CR>
         {
             protected override CR Define()
             {

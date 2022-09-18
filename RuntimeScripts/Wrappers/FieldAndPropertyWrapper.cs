@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
@@ -67,7 +68,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
         private void OnChange(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != name) return;
             object value = (sender as ExpandoObject)?.Get(name);
             field?.SetValue(parent, value.As(type, mapper));
             property?.SetValue(parent, value.As(type, mapper));
