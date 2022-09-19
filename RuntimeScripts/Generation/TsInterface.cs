@@ -7,7 +7,7 @@ using pbuddy.TypeScriptingUtility.RuntimeScripts;
 
 namespace pbuddy.TypeScriptingUtility.EditorScripts
 {
-    public readonly struct TsDeclaration
+    public readonly struct TsInterface: ITsThing
     {
         public string Reference { get; }
         
@@ -16,13 +16,13 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 
         private static readonly string NewLineIndent = Environment.NewLine + "\t";
         
-        public TsDeclaration(string reference)
+        public TsInterface(string reference)
         {
             Reference = reference;
             Declaration = null;
         }
         
-        public TsDeclaration(Type type, Func<Type, string> getClassName, IClrToTsNameMapper nameMapper)
+        public TsInterface(Type type, Func<Type, string> getClassName, IClrToTsNameMapper nameMapper)
         {
             string className = getClassName(type);
             
@@ -41,7 +41,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             if (type.IsArray)
             {
                 Type elementType = type.GetElementType() ?? throw new Exception(nameof(Array));
-                Reference = $"{getClassName(elementType) ?? new TsDeclaration(elementType, getClassName, nameMapper).Reference}[]";
+                Reference = $"{getClassName(elementType) ?? new TsInterface(elementType, getClassName, nameMapper).Reference}[]";
                 Declaration = null;
             }
 
@@ -96,7 +96,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             string GetDeclaration(MemberInfo memberInfo)
             {
                 var member = new DataMember(memberInfo);
-                string reference = new TsDeclaration(member.Type, getClassName, nameMapper).Reference;
+                string reference = new TsInterface(member.Type, getClassName, nameMapper).Reference;
                 return $"{nameMapper.ToTs(member.Name)}: {reference}";
             }
 

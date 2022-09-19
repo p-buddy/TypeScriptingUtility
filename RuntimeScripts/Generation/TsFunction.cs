@@ -6,11 +6,12 @@ using pbuddy.TypeScriptingUtility.RuntimeScripts;
 
 namespace pbuddy.TypeScriptingUtility.EditorScripts
 {
-    public readonly struct TsFunction
+    public readonly struct TsFunction: ITsThing
     {
         public string Declaration { get; }
+        public string Reference { get; }
 
-        public TsFunction(IShared shared, Dictionary<Type, TsDeclaration> declarations)
+        public TsFunction(IShared shared, Dictionary<Type, ITsThing> typeMap)
         {
             MethodInfo method = (shared.NonSpecificClrObject as MulticastDelegate)?.Method ?? throw new Exception("");
             ParameterInfo[] parameters = method.GetParameters();
@@ -21,12 +22,13 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             string paramsText = String.Join(", ", parameters.Select(GetParameterDeclaration));
             
             Declaration = @$"
-export const {name} = ({paramsText}): {TsParam(@return)} => {{
+{TsGenerator.ExportConst} {name} = ({paramsText}): {TsParam(@return)} => {{
     {TsGenerator.TsIgnore}
     return {TsType.Internalize(name)}({argsText});
 }};";
+            Reference = shared.TsType.Name;
 
-            string TsParam(ParameterInfo param) => declarations[param.ParameterType].Reference;
+            string TsParam(ParameterInfo param) => typeMap[param.ParameterType].Reference;
             static string GetParameterName(ParameterInfo param) => param.Name;
             string GetParameterDeclaration(ParameterInfo param) => $"{param.Name}: {TsParam(param)}";
         }

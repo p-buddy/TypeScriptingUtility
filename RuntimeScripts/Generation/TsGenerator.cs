@@ -19,7 +19,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         
         public static string Content(IAPI api)
         {
-            Dictionary<Type, TsDeclaration> typeMap = new Dictionary<Type, TsDeclaration>();
+            Dictionary<Type, ITsThing> typeMap = new Dictionary<Type, ITsThing>();
             IShared[] shared = api.Shared;
 
             Dictionary<Type, string> classNamesByType = shared.Where(s => s.TsType.Spec == TsType.Specification.Class)
@@ -32,21 +32,21 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 
             foreach (Type type in types)
             {
-                var declaration = new TsDeclaration(type, GetClassName, api.NameMapper);
-                if (declaration.Declaration is not null) builder.Append(declaration.Declaration);
-                typeMap[type] = declaration;
+                TsInterface tsInterface = new (type, GetClassName, api.NameMapper);
+                if (tsInterface.Declaration is not null) builder.Append(tsInterface.Declaration);
+                typeMap[type] = tsInterface;
             }
 
             foreach (IShared share in shared)
             {
-                string declaration = share.TsType.Match(new TsType.Matcher.Func<string>
+                ITsThing tsThing = share.TsType.Match(new TsType.Matcher.Func<ITsThing>
                 {
-                    OnVariable = () => new TsVariable(share, typeMap).Declaration,
-                    OnClass = () => new TsClass(share, typeMap).Declaration,
-                    OnFunction = () => new TsFunction(share, typeMap).Declaration
+                    OnVariable = () => new TsVariable(share, typeMap),
+                    OnClass = () => new TsClass(share, typeMap),
+                    OnFunction = () => new TsFunction(share, typeMap)
                 });
 
-                builder.Append(declaration);
+                builder.Append(tsThing.Declaration);
             }
 
             return builder.ToString();
