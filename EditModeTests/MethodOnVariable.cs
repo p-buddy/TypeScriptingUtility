@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using NUnit.Framework;
+using pbuddy.TypeScriptingUtility.EditorScripts;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -10,6 +11,8 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
 {
     public class MethodOnVariable
     {
+        private static readonly string Name = ClrToTsNameMapper.PascalToCamelCase.ToTs(nameof(MethodOnVariable));
+        
         public int State { get; private set; }
         public int GetBack(int x) => x;
         public int GetSum(params int[] x) => x.Sum();
@@ -24,19 +27,19 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
             
             protected override Domain Define() => new()
             {
-                Internal = TsType.Variable(nameof(MethodOnVariable), new MethodOnVariable()),
+                Internal = TsType.Variable(Name, new MethodOnVariable()),
             };
         }
 
         private static (string, Action<API.Domain>)[] Cases => new(string, Action<API.Domain>)[]
         {
-            (nameof(MethodOnVariable).CallAndCheckForEquality(nameof(GetBack), 4, 4), null),
-            (nameof(MethodOnVariable).CallAndCheckForEquality(nameof(GetSum), new []{2, 3}, 5), null),
-            (nameof(MethodOnVariable).Call(nameof(LogThis), "hello world"), _ =>
+            (Name.CallAndCheckForEquality(nameof(GetBack), 4, 4), null),
+            (Name.CallAndCheckForEquality(nameof(GetSum), new []{2, 3}, 5), null),
+            (Name.Call(nameof(LogThis), "hello world"), _ =>
             {
                 LogAssert.Expect(LogType.Log, "hello world");
             }),
-            (nameof(MethodOnVariable).Set(nameof(State), 123456), domain =>
+            (Name.Set(nameof(State), 123456), domain =>
             {
                 Assert.AreEqual(domain.Internal.ClrObject.State, 123456);
             }),
@@ -47,6 +50,7 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
         {
             (string code, Action<API.Domain> assertion) = testCase;
             new API().Test(code, assertion);
+            Debug.Log(new API().Generate());
         }
     }
 }

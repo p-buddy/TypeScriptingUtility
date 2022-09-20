@@ -6,14 +6,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         public static readonly IClrToTsNameMapper Default = new DefaultMapper();
         public static readonly IClrToTsNameMapper PascalToCamelCase = new PascalToCamelCaseMapper();
 
-        private struct DefaultMapper: IClrToTsNameMapper
+        private readonly struct DefaultMapper: IClrToTsNameMapper
         {
             public Delegate ToTs => input => input;
             public Delegate ToClr => input => input;
 
         }
 
-        private struct PascalToCamelCaseMapper: IClrToTsNameMapper
+        private readonly struct PascalToCamelCaseMapper: IClrToTsNameMapper
         {
             public Delegate ToTs => input => $"{char.ToLowerInvariant(input[0])}{input.Substring(1)}";
             public Delegate ToClr => input => $"{char.ToUpperInvariant(input[0])}{input.Substring(1)}";

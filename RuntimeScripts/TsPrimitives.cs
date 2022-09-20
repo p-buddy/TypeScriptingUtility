@@ -17,7 +17,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         name = type.IsArray ? $"{NameByJsType[jsType]}[]" : NameByJsType[jsType];
         return true;
       }
-    
+
       name = null;
       return false;
     }

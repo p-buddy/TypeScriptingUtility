@@ -1,18 +1,9 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using Jint;
-using Jint.Runtime.Interop;
-using pbuddy.TypeScriptingUtility.EditorScripts;
-using UnityEditor;
-using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public class ExecutionContext
+    public readonly struct ExecutionContext
     {
         public Engine Engine => engine;
         private readonly Engine engine;
@@ -38,20 +29,21 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             {
                 engine.SetValue(global.Key, global.Value);
             }
-            engine.Execute(wrappedType.GetClassDeclaration(name));
+            engine.Execute(wrappedType.GetJsClassDeclaration(name));
         }
 
         public void ApplyAPI<T>(APIBase<T> api)
         {
+            ExecutionContext self = this;
             IShared[] links = api.Shared;
             foreach (IShared link in links)
             {
                 string name = api.NameMapper.MapToTs(link.TsType.Name);
                 link.TsType.Match(new TsType.Matcher.Action
                 {
-                    OnVariable = () => AddVariable(name, link.NonSpecificClrObject.Wrap(api.NameMapper)),
-                    OnClass = () => AddType(name, link.ClrType.Wrap(api.NameMapper)),
-                    OnFunction = () => AddFunction(name, link.NonSpecificClrObject.Wrap(api.NameMapper))
+                    OnVariable = () => self.AddVariable(name, link.NonSpecificClrObject.Wrap(api.NameMapper)),
+                    OnClass = () => self.AddType(name, link.ClrType.Wrap(api.NameMapper)),
+                    OnFunction = () => self.AddFunction(name, link.NonSpecificClrObject.Wrap(api.NameMapper))
                 });
             } 
         }

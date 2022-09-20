@@ -40,7 +40,7 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
         public void Define()
         {
             var api = new MyAPI();
-            var content = TsGenerator.Content(api);
+            var content = TsGenerator.Generate(api);
             Debug.Log(content);
             
         }

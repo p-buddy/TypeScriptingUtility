@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public interface IAPI
@@ -5,5 +8,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         IClrToTsNameMapper NameMapper { get; }
 
         IShared[] Shared { get; }
+        Dictionary<Type, IShared> this[TsType.Specification spec] { get; }
     }
 }

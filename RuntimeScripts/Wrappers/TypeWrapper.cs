@@ -55,7 +55,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             };
         }
 
-        public string GetClassDeclaration(string name)
+        public string GetJsClassDeclaration(string name)
         {
             const string tab = "\t";
             const string internalName = "this.internal";

@@ -14,7 +14,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     {
         private bool defined;
         private TExecutionDomain domain;
-        
+        private IShared[] shared;
+        private Dictionary<TsType.Specification, Dictionary<Type, IShared>> typesBySpecification;
+
         public TExecutionDomain Domain
         {
             get
@@ -24,12 +26,31 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 return domain;
             }
         }
+        
+        public IShared[] Shared
+        {
+            get
+            {
+                shared ??= RetrieveTsRootTypes(Domain);
+                return shared;
+            }
+        }
+
+        public Dictionary<Type, IShared> this[TsType.Specification spec]
+        {
+            get
+            {
+                typesBySpecification ??= OrganizeShared(Shared);
+                return typesBySpecification[spec];
+            }
+        }
 
         public virtual IClrToTsNameMapper NameMapper => ClrToTsNameMapper.Default;
-        public IShared[] Shared => RetrieveTsRootTypes(Domain);
+
+        
         protected abstract TExecutionDomain Define();
 
-        private IShared[] RetrieveTsRootTypes(TExecutionDomain obj)
+        private static IShared[] RetrieveTsRootTypes(TExecutionDomain obj)
         {
             const BindingFlags flags = BindingFlags.Public |
                                        BindingFlags.NonPublic |
@@ -65,6 +86,23 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                       .Select(As<IShared>)
                       .ToArray()
                       .ValidateSharedValues();
+        }
+
+        private static Dictionary<TsType.Specification, Dictionary<Type, IShared>> OrganizeShared(IShared[] shared)
+        {
+            Dictionary<TsType.Specification, Dictionary<Type, IShared>> typesBySpec = new ()
+                {
+                    {TsType.Specification.Class, new Dictionary<Type, IShared>()},
+                    {TsType.Specification.Variable, new Dictionary<Type, IShared>()},
+                    {TsType.Specification.Function, new Dictionary<Type, IShared>()}
+                };
+
+            foreach (IShared share in shared)
+            {
+                typesBySpec[share.TsType.Spec][share.ClrType] = share;
+            }
+
+            return typesBySpec;
         }
     }
     

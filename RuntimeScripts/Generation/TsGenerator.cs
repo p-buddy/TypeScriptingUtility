@@ -17,23 +17,18 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         public const string ExportConst = "export const";
         public const string TsIgnore = "// @ts-ignore";
         
-        public static string Content(IAPI api)
+        public static string Generate(this IAPI api)
         {
             Dictionary<Type, ITsThing> typeMap = new Dictionary<Type, ITsThing>();
             IShared[] shared = api.Shared;
-
-            Dictionary<Type, string> classNamesByType = shared.Where(s => s.TsType.Spec == TsType.Specification.Class)
-                                                              .ToDictionary(s => s.ClrType, s => s.TsType.Name);
-            
-            string GetClassName(Type type) => classNamesByType.TryGetValue(type, out string name) ? name : null;
 
             var types = shared.RetrieveNestedTypes();
             StringBuilder builder = new StringBuilder(shared.Length + types.Count);
 
             foreach (Type type in types)
             {
-                TsInterface tsInterface = new (type, GetClassName, api.NameMapper);
-                if (tsInterface.Declaration is not null) builder.Append(tsInterface.Declaration);
+                TsInterface tsInterface = new (type, api);
+                if (tsInterface.Declaration is not null) builder.AppendLine(tsInterface.Declaration);
                 typeMap[type] = tsInterface;
             }
 
@@ -46,7 +41,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                     OnFunction = () => new TsFunction(share, typeMap)
                 });
 
-                builder.Append(tsThing.Declaration);
+                builder.AppendLine(tsThing.Declaration);
             }
 
             return builder.ToString();
@@ -105,11 +100,20 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                 return;
             }
 
+            if (type.IsGenericType)
+            {
+                foreach (Type genericType in type.GetGenericArguments())
+                {
+                    // RetrieveNestedTypes(genericType, types, true);
+                    // ^Above causes crashes -- not yet sure if necessary
+                }
+            }
+
             const BindingFlags flags = BindingFlags.Public |
                                        BindingFlags.Instance |
                                        BindingFlags.DeclaredOnly;
 
-            static bool IsCorrectMemberType(MemberInfo info, bool dtoOnly)
+            static bool IsCorrectMemberType(MemberInfo info, Type type, bool dtoOnly)
             {
                 return info.MemberType switch
                 {
@@ -120,7 +124,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                 };
             }
 
-            var relevantMembers = type.GetMembers(flags).Where(info => IsCorrectMemberType(info, dtoOnly));
+            var relevantMembers = type.GetMembers(flags).Where(info => IsCorrectMemberType(info, type, dtoOnly));
             foreach (MemberInfo member in relevantMembers.ToArray())
             {
                 switch (member.MemberType)

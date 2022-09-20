@@ -2,7 +2,7 @@ using System;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
-    public class TsType 
+    public readonly struct TsType
     {
         public static class Matcher
         {
