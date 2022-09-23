@@ -9,7 +9,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         public string Declaration { get; }
         public string Reference { get; }
 
-        public TsClass(IShared shared, Dictionary<Type, ITsThing> typeMap)
+        public TsClass(IShared shared, Dictionary<Type, TsReference> typeMap)
         {
             Reference = shared.TsType.Name;
             Declaration = "";

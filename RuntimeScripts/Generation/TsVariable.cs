@@ -9,11 +9,11 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         public string Declaration { get; }
         public string Reference { get; }
 
-        public TsVariable(IShared shared, Dictionary<Type, ITsThing> typeMap)
+        public TsVariable(IShared shared, Dictionary<Type, TsReference> referenceMap)
         {
             string name = shared.TsType.Name;
             Type type = shared.ClrType;
-            Declaration = $"{TsGenerator.ExportConst} {name}: {typeMap[type].Reference} = {TsType.Internalize(name)};";
+            Declaration = $"{TsGenerator.TsIgnore}{Environment.NewLine}{TsGenerator.ExportConst} {name}: {referenceMap[type].Reference} = {TsType.Internalize(name)};";
             Reference = shared.TsType.Name;
         }
     }

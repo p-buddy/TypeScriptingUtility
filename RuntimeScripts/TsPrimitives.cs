@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using pbuddy.TypeScriptingUtility.EditorScripts;
 using UnityEngine.Assertions;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
@@ -20,6 +21,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
       name = null;
       return false;
+    }
+
+    public static void AddPrimitiveReferences(this Dictionary<Type, TsReference> referenceMap)
+    {
+      foreach ((Type clrType, Type jsType) in ClrToJs)
+      {
+        referenceMap[clrType] = TsReference.Primitive(clrType, NameByJsType[jsType]);
+      }
     }
 
     private static readonly Dictionary<Type, Type> ClrToJs;

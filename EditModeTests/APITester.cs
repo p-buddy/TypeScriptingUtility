@@ -1,23 +1,31 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using NUnit.Framework;
+using pbuddy.TypeScriptingUtility.EditorScripts;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
-using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.EditModeTests
 {
     public static class APITester
     {
         private static readonly string AssertEquality = "areEqual";
+        public delegate void AssertEqualDelegate(object expected, object actual, string message, object[] args);
+
+        public static readonly Shared<AssertEqualDelegate> AssertEqual = TsType.Function<AssertEqualDelegate>("areEqual", Assert.AreEqual);
         public static void Test<TAPI, TDomain>(this TAPI api,
                                                string testCode,
                                                Action<TDomain> validate) where TAPI : APIBase<TDomain>, new()
         {
-            JsRunner.ExecuteString(testCode, context =>
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine(api.Generate());
+            builder.AppendLine(testCode);
+            string fullCode = JsRunner.CompileTs(builder.ToString());
+            
+            JsRunner.ExecuteString(fullCode, context =>
             {
-                context.AddFunction<Action<object, object, string, object[]>>(AssertEquality, Assert.AreEqual);
+                context.Engine.SetValue("exports", new object());
+                context.AddFunction("exports", new object());
                 context.ApplyAPI(api);
             });
             validate?.Invoke(api.Domain);

@@ -23,11 +23,5 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         public static bool IsTuple(Type type) => type.IsGenericType && ValueTupleTypes.Contains(type.GetGenericTypeDefinition());
         public string Declaration => null;
         public string Reference { get; }
-
-        public TsTuple(Type type, IAPI containingAPI)
-        {
-            Reference = "null";
-            //Reference = $"[{String.Join(", ", type.GetGenericArguments().Select(t => new TsInterface(t, containingAPI).Reference))}]";
-        }
     }
 }

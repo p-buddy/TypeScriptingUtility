@@ -22,12 +22,14 @@ namespace pbuddy.TypeScriptingUtility.EditModeTests
         {
             public new struct Domain
             {
+                public Shared<APITester.AssertEqualDelegate> Assert;
                 public Shared<MethodOnVariable> Internal;
             }
             
             protected override Domain Define() => new()
             {
                 Internal = TsType.Variable(Name, new MethodOnVariable()),
+                Assert = APITester.AssertEqual
             };
         }
 

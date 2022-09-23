@@ -15,12 +15,12 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
         public void AddFunction<TFunction>(string name, TFunction function)
         {
-            engine.SetValue(name, function);
+            engine.SetValue(TsType.Internalize(name), function);
         }
         
         public void AddVariable<T>(string name, T item)
         {
-            engine.SetValue(name, item);
+            engine.SetValue(TsType.Internalize(name), item);
         }
 
         public void AddType(string name, TypeWrapper wrappedType)

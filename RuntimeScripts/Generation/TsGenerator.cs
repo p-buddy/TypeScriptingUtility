@@ -19,32 +19,51 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         
         public static string Generate(this IAPI api)
         {
-            Dictionary<Type, ITsThing> typeMap = new Dictionary<Type, ITsThing>();
+            Dictionary<Type, TsReference> referenceMap = new Dictionary<Type, TsReference>();
             IShared[] shared = api.Shared;
+            
+            referenceMap.AddPrimitiveReferences();
+            referenceMap.AddClassReferences(api);
 
-            var types = shared.RetrieveNestedTypes();
-            StringBuilder builder = new StringBuilder(shared.Length + types.Count);
-
-            foreach (Type type in types)
+            List<Type> nestedReferences = shared.RetrieveNestedTypes().ToList();
+            int iterationCount = 0;
+            int maxIterations = nestedReferences.Count + 1;
+            while (nestedReferences.Count > 0 && iterationCount < maxIterations)
             {
-                TsInterface tsInterface = new (type, api);
-                if (tsInterface.Declaration is not null) builder.AppendLine(tsInterface.Declaration);
-                typeMap[type] = tsInterface;
+                for (int index = nestedReferences.Count - 1; index >= 0; index--)
+                {
+                    Type type = nestedReferences[index];
+                    
+                    if (!TsReference.TryDefine(type, api, referenceMap, out TsReference reference)) continue;
+                    
+                    nestedReferences.RemoveAt(index);
+                    referenceMap[type] = reference;
+                }
+
+                iterationCount++;
             }
 
+            HashSet<string> lines = new HashSet<string>(referenceMap.Count + shared.Length);
+            foreach ((_, TsReference reference) in referenceMap)
+            {
+                if (reference.TryGetDeclaration(api, referenceMap, out string declaration))
+                {
+                    lines.Add(declaration);
+                }
+            }
+            
             foreach (IShared share in shared)
             {
                 ITsThing tsThing = share.TsType.Match(new TsType.Matcher.Func<ITsThing>
                 {
-                    OnVariable = () => new TsVariable(share, typeMap),
-                    OnClass = () => new TsClass(share, typeMap),
-                    OnFunction = () => new TsFunction(share, typeMap)
+                    OnVariable = () => new TsVariable(share, referenceMap),
+                    OnClass = () => new TsClass(share, referenceMap),
+                    OnFunction = () => new TsFunction(share, referenceMap)
                 });
-
-                builder.AppendLine(tsThing.Declaration);
+                lines.Add(tsThing.Declaration);
             }
 
-            return builder.ToString();
+            return String.Join(Environment.NewLine, lines);
         }
 
         private static HashSet<Type> RetrieveNestedTypes(this IShared[] allShared)
@@ -86,9 +105,17 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
             return types;
         }
 
+        private static void AddClassReferences(this Dictionary<Type, TsReference> referenceMap, IAPI api)
+        {
+            foreach ((Type classType, IShared shareClass) in api[TsType.Specification.Class])
+            {
+                referenceMap[classType] = TsReference.Class(shareClass.ClrType, shareClass.TsType.Name);
+            }
+        }
+
         private static void RetrieveNestedTypes(Type type, HashSet<Type> types, bool dtoOnly = false)
         {
-            if (type is null || types.Contains(type) || type.IsTsPrimitive()) return;
+            if (type is null || types.Contains(type) || type.IsTsPrimitive() || type.IsGenericTypeDefinition) return;
             
             types.Add(type);
 
@@ -102,10 +129,10 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 
             if (type.IsGenericType)
             {
-                foreach (Type genericType in type.GetGenericArguments())
+                foreach (Type genericType in type.GenericTypeArguments)
                 {
-                    // RetrieveNestedTypes(genericType, types, true);
-                    // ^Above causes crashes -- not yet sure if necessary
+                    RetrieveNestedTypes(genericType, types, true);
+                    // ^Above causes crashes -- not why yet or if this is necessary
                 }
             }
 
@@ -113,18 +140,19 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                                        BindingFlags.Instance |
                                        BindingFlags.DeclaredOnly;
 
-            static bool IsCorrectMemberType(MemberInfo info, Type type, bool dtoOnly)
+            static bool IsCorrectMemberType(Type type, MemberInfo info, bool dtoOnly)
             {
                 return info.MemberType switch
                 {
                     MemberTypes.Field => true,
                     MemberTypes.Property => true,
+                    MemberTypes.NestedType => true,
                     MemberTypes.Method => !dtoOnly,
                     _ => false
                 };
             }
 
-            var relevantMembers = type.GetMembers(flags).Where(info => IsCorrectMemberType(info, type, dtoOnly));
+            var relevantMembers = type.GetMembers(flags).Where(info => IsCorrectMemberType(type, info, dtoOnly));
             foreach (MemberInfo member in relevantMembers.ToArray())
             {
                 switch (member.MemberType)
@@ -134,6 +162,9 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                         break;
                     case MemberTypes.Property:
                         RetrieveNestedTypes((member as PropertyInfo)?.PropertyType, types, true);
+                        break;
+                    case MemberTypes.NestedType:
+                        RetrieveNestedTypes(member as Type, types, true);
                         break;
                     case MemberTypes.Method:
                         var method = member as MethodInfo ?? throw new Exception();
