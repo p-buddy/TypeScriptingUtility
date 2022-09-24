@@ -28,7 +28,12 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 }};";
             Reference = shared.TsType.Name;
 
-            string TsParam(ParameterInfo param) => referenceMap[param.ParameterType].Reference;
+            string TsParam(ParameterInfo param)
+            {
+                param.ParameterType.TryGetReference(referenceMap, out string reference);
+                return reference;
+            }
+
             static string GetParameterName(ParameterInfo param) => param.Name;
             string GetParameterDeclaration(ParameterInfo param) => $"{param.Name}: {TsParam(param)}";
         }

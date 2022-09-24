@@ -1,5 +1,8 @@
 using System;
+using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
@@ -14,7 +17,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         public DataMember(PropertyInfo propertyInfo)
         {
             Type = propertyInfo.PropertyType;
-            internalSetValue = propertyInfo.SetValue;
+            internalSetValue = GetPropertySetter(propertyInfo);
             member = propertyInfo;
         }
             
@@ -35,7 +38,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     break;
                 case PropertyInfo propertyInfo:
                     Type = propertyInfo.PropertyType;
-                    internalSetValue = propertyInfo.SetValue;
+                    internalSetValue = GetPropertySetter(propertyInfo);
                     break;
                 default:
                     throw new Exception("Must be field or property");
@@ -44,5 +47,25 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         }
 
         public void SetValue(object obj, object value) => internalSetValue.Invoke(obj, value);
+
+        private static Action<object, object> GetPropertySetter(PropertyInfo propertyInfo) =>
+            propertyInfo.CanWrite
+                ? propertyInfo.SetValue
+                : SketchilyGetBackingField(propertyInfo);
+        
+        private static Action<object, object> SketchilyGetBackingField(PropertyInfo propertyInfo)
+        {
+            var backingField = propertyInfo.DeclaringType
+                                           .GetFields(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+                                           .FirstOrDefault(field =>
+                                                               field.Attributes.HasFlag(FieldAttributes.Private) &&
+                                                               field.Attributes.HasFlag(FieldAttributes.InitOnly) &&
+                                                               field.CustomAttributes.Any(attr => attr.AttributeType == typeof(CompilerGeneratedAttribute)) &&
+                                                               (field.DeclaringType == propertyInfo.DeclaringType) &&
+                                                               field.FieldType.IsAssignableFrom(propertyInfo.PropertyType) &&
+                                                               field.Name.StartsWith("<" + propertyInfo.Name + ">")
+                                                          );
+            return backingField is null ? null : backingField.SetValue;
+        }
     }
 }

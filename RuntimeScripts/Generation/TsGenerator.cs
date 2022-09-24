@@ -65,6 +65,26 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 
             return String.Join(Environment.NewLine, lines);
         }
+        
+        internal static bool TryGetReference(this Type type,
+                                             IReadOnlyDictionary<Type, TsReference> typeMap,
+                                             out string reference)
+        {
+            if (!typeMap.ContainsKey(type))
+            {
+                reference = null;
+                return false;
+            }
+                
+            reference = typeMap[type].Reference;
+            if (type.TryGetValuableInterface(out Type valuableInterface))
+            {
+                Type valuableType = valuableInterface.GenericTypeArguments[0];
+                if (!typeMap.ContainsKey(valuableType)) return false;
+                reference = $"{reference} | {typeMap[valuableType].Reference}";
+            }
+            return true;
+        }
 
         private static HashSet<Type> RetrieveNestedTypes(this IShared[] allShared)
         {

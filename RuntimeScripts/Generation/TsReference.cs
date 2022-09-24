@@ -64,11 +64,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
         
         public static bool TryDefine(Type type, IAPI api, Dictionary<Type, TsReference> referenceMap, out TsReference tsInterface)
         {
-            static bool TryGetReference(Type type, IReadOnlyDictionary<Type, TsReference> typeMap, out string reference)
-            {
-                reference = typeMap.ContainsKey(type) ? typeMap[type].Reference : null;
-                return reference is not null;
-            }
+            
 
             if (referenceMap.TryGetValue(type, out tsInterface)) return true;
             
@@ -77,7 +73,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                 static string Bracket(string typeName) => $"{typeName}[]";
                 
                 Type elementType = type.GetElementType() ?? throw new Exception(nameof(Array));
-                if (TryGetReference(elementType, referenceMap, out string reference))
+                if (elementType.TryGetReference(referenceMap, out string reference))
                 {
                     tsInterface = new TsReference(Bracket(reference), type, ReferenceType.Array);
                     return true;
@@ -92,7 +88,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                 List<string> references = new List<string>();
                 foreach (Type tupleType in types)
                 {
-                    if (!TryGetReference(tupleType, referenceMap, out string reference)) return false;
+                    if (!tupleType.TryGetReference(referenceMap, out string reference)) return false;
                     references.Add(reference);
                 }
 
@@ -135,7 +131,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                 for (var index = 0; index < genericParameters.Length; index++)
                 {
                     Type arg = genericParameters[index];
-                    if (!TryGetReference(arg, referenceMap, out string reference)) return false;
+                    if (!arg.TryGetReference(referenceMap, out string reference)) return false;
                     args.Add($"arg{index}: {reference}");
                 }
 
@@ -158,7 +154,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
                 
                 foreach (Type arg in genericArgs)
                 {
-                    if (!TryGetReference(arg, referenceMap, out string reference)) return false;
+                    if (!arg.TryGetReference(referenceMap, out string reference)) return false;
                     argsText.Add(reference);
                 }
 
@@ -181,7 +177,7 @@ namespace pbuddy.TypeScriptingUtility.EditorScripts
 
             for (int i = 0; i < names.Length; i++)
             {
-                entries[i] = $"{names[i]} = {values.GetValue(i).As(underlyingType)},";
+                entries[i] = $"{names[i]} = {values.GetValue(i).As(underlyingType, null)},";
             }
             
             return @$"export const enum {type.Name} {{{NewLineIndent}{string.Join(NewLineIndent, entries)}

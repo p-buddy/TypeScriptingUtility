@@ -15,6 +15,12 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             DataMembersByType = new Dictionary<Type, DataMember[]>();
         }
+
+        public static bool Has(this ExpandoObject expando, string name) =>
+            ((IDictionary<string, object>)expando).ContainsKey(name);
+
+        public static object Get(this ExpandoObject expando, string name) => ((IDictionary<string, object>)expando)[name];
+        public static void Add<T>(this ExpandoObject expando, string name, T value) => ((IDictionary<string, object>)expando)[name] = value;
         
         /// <summary>
         /// 
@@ -24,26 +30,35 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         /// <param name="mapper"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public static object As(this object obj, Type type, IClrToTsNameMapper mapper = null)
+        public static object As(this object obj, Type type, IClrToTsNameMapper mapper)
         {
             try
             {
+                if (obj is null)
+                {
+                    int x = 0;
+                }
                 if (type.IsInstanceOfType(obj))
                 {
                     return obj;
                 }
 
-                if (IsDirectlyConvertible(type))
+                if (type.IsDirectlyConvertible())
                 {
-                    return AsType(obj, type);
+                    return obj.AsType(type);
+                }
+
+                if (obj.TryTreatAsValuable(type, mapper, out object converted))
+                {
+                    return converted;
                 }
 
                 switch (obj)
                 {
                     case ExpandoObject expandoObject:
-                        return To(expandoObject, type, Activator.CreateInstance, mapper);
+                        return expandoObject.To(type, Activator.CreateInstance, mapper);
                     case Array arr:
-                        return ExtractArray(type, arr);
+                        return ExtractArray(type, arr, mapper);
                 }
             }
             catch (Exception e)
@@ -66,22 +81,59 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             return Enum.Parse(enumType, jsValue);
         }
 
-        private static bool IsDirectlyConvertible(Type type) =>
+        public static bool TryGetValuableInterface(this Type type, out Type valuableInterface)
+        {
+            Type[] interfaces = type.GetInterfaces();
+            foreach (Type @interface in interfaces)
+            {
+                if (@interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(IValuable<>))
+                {
+                    valuableInterface = @interface;
+                    return true;
+                }
+            }
+
+            valuableInterface = default;
+            return false;
+        }
+        
+        private static bool TryTreatAsValuable(this object obj, Type type, IClrToTsNameMapper mapper, out object withValue)
+        {
+            if (!type.TryGetValuableInterface(out Type valuableInterface))
+            {
+                withValue = null;
+                return false;
+            }
+            
+            string valueFieldName = mapper.MapToTs(nameof(IValuable<object>.Value));
+            if (obj is ExpandoObject expando && expando.Has(valueFieldName))
+            {
+                withValue = default;
+                return false;
+            }
+            
+            Type valuableType = valuableInterface.GenericTypeArguments[0];
+            ExpandoObject expandoWithValue = new() { { valueFieldName, obj.As(valuableType, mapper) } };
+            withValue = expandoWithValue.To(type, Activator.CreateInstance, mapper);
+            return true;
+        }
+
+        private static bool IsDirectlyConvertible(this Type type) =>
             !type.IsArray && type.IsPrimitive || typeof(string).IsAssignableFrom(type);
         
         private static object AsType(this object obj, Type type) => Convert.ChangeType(obj, type);
 
-        private static object To(ExpandoObject obj,
+        private static object To(this ExpandoObject obj,
                                  Type type,
                                  Func<Type, object> constructor,
-                                 IClrToTsNameMapper mapper = null)
+                                 IClrToTsNameMapper mapper)
         {
             if (type.IsInstanceOfType(obj))
             {
                 return obj;
             }
             
-            if (IsDirectlyConvertible(type))
+            if (type.IsDirectlyConvertible())
             {
                 return obj.AsType(type);
             }
@@ -94,7 +146,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 string name = mapper.MapToClr(kvp.Key);
                 if (!TryMatchMember(name, type, out DataMember member))
                 {
-                    throw new Exception($"Could not match property for: {name}");
+                    throw new Exception($"Could not match member for: {name}");
                 }
                 
                 Type memberType = member.Type;
@@ -106,44 +158,74 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
                 if (memberType.IsEnum)
                 {
-                    string entry = kvp.Value as string;
+                    string entry = $"{kvp.Value}";
                     member.SetValue(container, ConvertEnumValueBack(entry, memberType).AsType(memberType));
                     continue;
                 }
 
                 if (memberType.IsArray)
                 {
-                    member.SetValue(container, ExtractArray(memberType, kvp.Value));
+                    member.SetValue(container, ExtractArray(memberType, kvp.Value, mapper));
+                    continue;
+                }
+
+                if (kvp.Value.TryTreatAsValuable(memberType, mapper, out object casted))
+                {
+                    member.SetValue(container, casted);
+                    continue;
+                }
+
+                if (kvp.Value.GetType() == memberType)
+                {
+                    member.SetValue(container, kvp.Value);
                     continue;
                 }
                 
-                member.SetValue(container, To(kvp.Value as ExpandoObject, memberType, Activator.CreateInstance));
+                member.SetValue(container, To(kvp.Value as ExpandoObject, memberType, Activator.CreateInstance, mapper));
             }
 
             return container;
         }
 
-        private static Array ExtractArray(Type arrayType, object arrayObject)
+        private static Array ExtractArray(Type arrayType, object arrayObject, IClrToTsNameMapper mapper)
         {
             Type elementType = arrayType.GetElementType();
             Assert.IsNotNull(elementType);
-            Array arr = arrayObject as Array;
-            Assert.IsNotNull(arr);
-            Array converted = Array.CreateInstance(elementType, arr.Length);
+            Array array = arrayObject as Array;
+            Assert.IsNotNull(array);
+            Array converted = Array.CreateInstance(elementType, array.Length);
             if (IsDirectlyConvertible(elementType))
             {
-                for (int i = 0; i < arr.Length; i++)
+                for (int i = 0; i < array.Length; i++)
                 {
-                    object element = arr.GetValue(i);
+                    object element = array.GetValue(i);
                     converted.SetValue(element.AsType(elementType), i);
+                }
+            }
+            else if (elementType.TryGetValuableInterface(out Type valuableInterface))
+            {
+                for (int i = 0; i < array.Length; i++)
+                {
+                    object element = array.GetValue(i);
+
+                    string valueFieldName = mapper.MapToTs(nameof(IValuable<object>.Value));
+                    if (element is ExpandoObject expando && expando.Has(valueFieldName))
+                    {
+                        converted.SetValue(To(expando, elementType, Activator.CreateInstance, mapper).AsType(elementType), i);
+                        continue;
+                    }
+            
+                    Type valuableType = valuableInterface.GenericTypeArguments[0];
+                    ExpandoObject expandoWithValue = new() { { valueFieldName, element.As(valuableType, mapper) } };
+                    converted.SetValue(expandoWithValue.To(elementType, Activator.CreateInstance, mapper), i); 
                 }
             }
             else
             {
-                for (int i = 0; i < arr.Length; i++)
+                for (int i = 0; i < array.Length; i++)
                 {
-                    ExpandoObject element = arr.GetValue(i) as ExpandoObject;
-                    converted.SetValue(To(element, elementType, Activator.CreateInstance).AsType(elementType), i); 
+                    ExpandoObject element = array.GetValue(i) as ExpandoObject;
+                    converted.SetValue(To(element, elementType, Activator.CreateInstance, mapper).AsType(elementType), i); 
                 }
             }
 

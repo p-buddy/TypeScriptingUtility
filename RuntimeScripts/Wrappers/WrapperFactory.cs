@@ -29,10 +29,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             }
         }
         
-        internal static void Add<T>(this ExpandoObject expando, string name, T value) => 
-            ((IDictionary<string, object>)expando)[name] = value;
-        
-        internal static object Get(this ExpandoObject expando, string name) => ((IDictionary<string, object>)expando)[name];
         private static string MappedName(this MemberInfo member, IClrToTsNameMapper mapper) => mapper.MapToTs(member.Name);
         
         private static MemberInfo[] GetWrappedMembers(this Type type) =>
