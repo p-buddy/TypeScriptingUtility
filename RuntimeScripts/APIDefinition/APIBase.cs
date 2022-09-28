@@ -10,7 +10,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     /// 
     /// </summary>
     /// <typeparam name="TExecutionDomain"></typeparam>
-    public abstract class APIBase<TExecutionDomain> : IAPI
+    public abstract class APIBase<TExecutionDomain> : IAPI, IDisposable
     {
         private bool defined;
         private TExecutionDomain domain;
@@ -46,12 +46,13 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         }
 
         public virtual IClrToTsNameMapper NameMapper => ClrToTsNameMapper.Default;
-
         
         protected abstract TExecutionDomain Define();
 
         private static IShared[] RetrieveTsRootTypes(TExecutionDomain obj)
         {
+            // Add caching
+            
             const BindingFlags flags = BindingFlags.Public |
                                        BindingFlags.NonPublic |
                                        BindingFlags.Instance |
@@ -103,6 +104,14 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             }
 
             return typesBySpec;
+        }
+
+        public void Dispose()
+        {
+            domain = default;
+            defined = false;
+            shared = null;
+            typesBySpecification = null;
         }
     }
     
