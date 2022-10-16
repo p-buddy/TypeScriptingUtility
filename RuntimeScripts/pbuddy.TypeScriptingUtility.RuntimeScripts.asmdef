@@ -1,9 +1,7 @@
 {
     "name": "pbuddy.TypeScriptingUtility.RuntimeScripts",
     "rootNamespace": "",
-    "references": [
-        ""
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

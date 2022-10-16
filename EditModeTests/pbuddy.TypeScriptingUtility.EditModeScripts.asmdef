@@ -2,10 +2,9 @@
     "name": "pbuddy.TypeScriptingUtility.EditModeScripts",
     "rootNamespace": "",
     "references": [
-        "GUID:0acc523941302664db1f4e527237feb3",
-        "GUID:27619889b8ba8c24980f49ee34dbb44a",
-        "GUID:c92f15fe9eef418ca032107c6ad6f9c5",
-        "GUID:0625d4e1e7d74d1a9bca24365bd595fb"
+        "UnityEditor.TestRunner",
+        "UnityEngine.TestRunner",
+        "pbuddy.TypeScriptingUtility.RuntimeScripts"
     ],
     "includePlatforms": [
         "Editor"
