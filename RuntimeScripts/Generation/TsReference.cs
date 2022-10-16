@@ -36,7 +36,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             this.referenceType = referenceType;
         }
 
-        public bool TryGetDeclaration(IAPI api, Dictionary<Type, TsReference> referenceMap, out string declaration)
+        public bool TryGetDeclaration(in TypeReferenceMap referenceMap, out string declaration)
         {
             switch (referenceType)
             {
@@ -52,26 +52,23 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     return true;
                 case ReferenceType.Structure:
                     declaration = GetDeclarationFromMembers(type.IsGenericType ? type.GetGenericTypeDefinition() : type,
-                                                            api,
-                                                            referenceMap);
+                                                            in referenceMap);
                     return true;
             }
 
             throw new Exception($"Unhandled reference type '{referenceType}' for: {type}");
         }
         
-        public static bool TryDefine(Type type, IAPI api, Dictionary<Type, TsReference> referenceMap, out TsReference tsInterface)
+        public static bool TryDefine(Type type, in TypeReferenceMap referenceMap, out TsReference tsInterface)
         {
-            
-
-            if (referenceMap.TryGetValue(type, out tsInterface)) return true;
+            if (referenceMap.TryGetTsReference(type, out tsInterface)) return true;
             
             if (type.IsArray)
             {
                 static string Bracket(string typeName) => $"{typeName}[]";
                 
                 Type elementType = type.GetElementType() ?? throw new Exception(nameof(Array));
-                if (elementType.TryGetReference(referenceMap, out string reference))
+                if (referenceMap.TryGetReferenceString(elementType, out string reference))
                 {
                     tsInterface = new TsReference(Bracket(reference), type, ReferenceType.Array);
                     return true;
@@ -86,7 +83,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 List<string> references = new List<string>();
                 foreach (Type tupleType in types)
                 {
-                    if (!tupleType.TryGetReference(referenceMap, out string reference)) return false;
+                    if (!referenceMap.TryGetReferenceString(tupleType, out string reference)) return false;
                     references.Add(reference);
                 }
 
@@ -113,9 +110,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
                 Type returnType = isAction ? null : type.GenericTypeArguments[^1];
                 string returnText = returnType is not null
-                    ? referenceMap.ContainsKey(returnType)
-                        ? referenceMap[returnType].Reference
-                        : null
+                    ? referenceMap.Contains(returnType) ? referenceMap.GetReference(returnType) : null
                     : "void";
                 
                 if (returnText is null)
@@ -129,7 +124,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 for (var index = 0; index < genericParameters.Length; index++)
                 {
                     Type arg = genericParameters[index];
-                    if (!arg.TryGetReference(referenceMap, out string reference)) return false;
+                    if (!referenceMap.TryGetReferenceString(arg, out string reference)) return false;
                     args.Add($"arg{index}: {reference}");
                 }
 
@@ -152,7 +147,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 
                 foreach (Type arg in genericArgs)
                 {
-                    if (!arg.TryGetReference(referenceMap, out string reference)) return false;
+                    if (!referenceMap.TryGetReferenceString(arg, out string reference)) return false;
                     argsText.Add(reference);
                 }
 
@@ -181,39 +176,25 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             return @$"export const enum {type.Name} {{{NewLineIndent}{string.Join(NewLineIndent, entries)}
 }}";
         }
-        
-        private static string GetDeclarationFromMembers(Type type, IAPI api, Dictionary<Type, TsReference> typeMap)
+
+        public static string GetMemberDeclaration(MemberInfo memberInfo,
+                                                  in TypeReferenceMap typeMap,
+                                                  bool isArrowFunction = true)
         {
-            const BindingFlags flags = BindingFlags.Public |
-                                       BindingFlags.Instance |
-                                       BindingFlags.DeclaredOnly;
-
-            var members = String.Join(", " + NewLineIndent,
-                                      type.GetMembers(flags)
-                                          .Where(member => IsCorrectMemberType(member, type, api))
-                                          .Select(member => GetMemberDeclaration(member, api, typeMap)));
-            
-            string name = type.IsGenericTypeDefinition
-                ? NonGenericName(type, type.GetGenericArguments().Select(t => t.Name))
-                : type.Name;
-            return @$"export type {name} = {{{NewLineIndent}{members}
-}}";
-            static bool IsPropertyGetterSetter(MemberInfo info) => info.Name.StartsWith("get_") || info.Name.StartsWith("set_");
-            static bool IsInvocable(Type type, IAPI api) => api[TsType.Specification.Variable].ContainsKey(type);
-            static bool IsCorrectMemberType(MemberInfo info, Type type, IAPI api)
+            if (memberInfo.MemberType == MemberTypes.Method)
             {
-                return info.MemberType switch
-                {
-                    MemberTypes.Field => true,
-                    MemberTypes.Property => true,
-                    MemberTypes.Method => !IsPropertyGetterSetter(info) && IsInvocable(type, api),
-                    _ => false
-                };
+                return GetMethodDeclaration(memberInfo, typeMap.API, typeMap, isArrowFunction);
             }
+                
+            DataMember member = new DataMember(memberInfo);
+            
+            // TODO handle indexers
+            
+            return $"{typeMap.API.NameMapper.ToTs(member.Name)}: {typeMap.GetReference(member.Type)}";
+            
+            #region Local Static Functions
 
-            static string GetMethodDeclaration(MemberInfo memberInfo, 
-                                               IAPI api, 
-                                               Dictionary<Type, TsReference> typeMap)
+            static string GetMethodDeclaration(MemberInfo memberInfo, IAPI api, in TypeReferenceMap typeMap, bool isArrowFunction)
             {
                 MethodInfo methodInfo = memberInfo as MethodInfo;
                 Assert.IsNotNull(methodInfo);
@@ -223,9 +204,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 for (var index = 0; index < parameters.Length; index++)
                 {
                     ParameterInfo parameter = parameters[index];
-                    string reference = parameter.ParameterType.IsGenericParameter
-                        ? parameter.ParameterType.Name
-                        : typeMap[parameter.ParameterType].Reference;
+                    string reference = typeMap.GetReference(parameter.ParameterType);
 
                     if (index < parameters.Length - 1 || !parameter.UsesParams())
                     {
@@ -236,27 +215,59 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     parametersText.Add($"...{parameter.Name}: {reference}");
                 }
                 
-                string returnReference = methodInfo.ReturnType.IsGenericParameter
-                    ? methodInfo.ReturnType.Name
-                    : typeMap[methodInfo.ReturnType].Reference;
-                
                 string name = api.NameMapper.ToTs(memberInfo.Name);
-                return $"{name}: ({string.Join(", ", parametersText)}) => {returnReference}";
+                return $"{name}{(isArrowFunction ? ": " : "")}({string.Join(", ", parametersText)}){(isArrowFunction ? " =>" : ":")} {typeMap.GetReference(methodInfo.ReturnType)}";
             }
+            
+            #endregion Local Static Functions
+        }
 
-            static string GetMemberDeclaration(MemberInfo memberInfo,
-                                                IAPI api,
-                                                Dictionary<Type, TsReference> typeMap)
+        public static IEnumerable<MemberInfo> GetMembersRequiringDeclaration(Type type, in TypeReferenceMap typeMap)
+        {
+            const BindingFlags flags = BindingFlags.Public |
+                                       BindingFlags.Instance |
+                                       BindingFlags.DeclaredOnly;
+
+            TypeReferenceMap localMap = typeMap;
+
+            return type.GetMembers(flags)
+                .Where(member => IsCorrectMemberType(member, type, localMap.API))
+                .Where(HideFromAPIAttribute.IsNotHidden);
+            
+            #region Local Static Functions
+            static bool IsPropertyGetterSetter(MemberInfo info) => info.Name.StartsWith("get_") || info.Name.StartsWith("set_");
+            static bool IsInvocable(Type type, IAPI api) =>
+                api[TsType.Specification.Variable].ContainsKey(type) ||
+                api[TsType.Specification.Class].ContainsKey(type);
+            
+            static bool IsCorrectMemberType(MemberInfo info, Type type, IAPI api)
             {
-                if (memberInfo.MemberType == MemberTypes.Method)
+                return info.MemberType switch
                 {
-                    return GetMethodDeclaration(memberInfo, api, typeMap);
-                }
-                
-                DataMember member = new DataMember(memberInfo);
-                string reference = member.Type.IsGenericParameter ? member.Type.Name : typeMap[member.Type].Reference;
-                return $"{api.NameMapper.ToTs(member.Name)}: {reference}";
+                    MemberTypes.Field => true,
+                    MemberTypes.Property => true,
+                    MemberTypes.Method => !IsPropertyGetterSetter(info) && IsInvocable(type, api),
+                    _ => false
+                };
             }
+            #endregion Local Static Functions
+        }
+
+        public static string GetMembersDeclaration(Type type, in TypeReferenceMap typeMap)
+        {
+            TypeReferenceMap localMap = typeMap;
+            IEnumerable<MemberInfo> members = GetMembersRequiringDeclaration(type, in typeMap);
+            return String.Join(", " + NewLineIndent, members.Select(member => GetMemberDeclaration(member, in localMap)));
+        }
+        
+        private static string GetDeclarationFromMembers(Type type, in TypeReferenceMap typeMap)
+        {
+            string name = type.IsGenericTypeDefinition
+                ? NonGenericName(type, type.GetGenericArguments().Select(t => t.Name))
+                : type.Name;
+            
+            return @$"export type {name} = {{{NewLineIndent}{GetMembersDeclaration(type, in typeMap)}
+}}";
         }
     }
 }

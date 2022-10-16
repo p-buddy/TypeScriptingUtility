@@ -16,7 +16,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         }
 
         private readonly Type type;
-        public Delegate ConstructorConstructorWrapper { get; }
+        public Delegate ConstructorWrapper { get; }
+        public (Type, string)[] ConstructorParams { get; }
         public Dictionary<string, MemberInfo> MembersByName { get; }
 
         public TypeWrapper(Type type, MemberInfo[] members, IClrToTsNameMapper nameMapper): this()
@@ -34,10 +35,19 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             ConstructorInfo constructorInfo = constructors.Length == 1
                 ? constructors[0]
                 : type.GetConstructor(Type.EmptyTypes);
-            ConstructorConstructorWrapper = constructorInfo is null 
-                ? new MethodWrapper(this, CreateInstanceMethod, nameMapper).Delegate
-                : new ConstructorWrapper(constructorInfo, nameMapper).Delegate;
-            
+
+            if (constructorInfo is null)
+            {
+                ConstructorWrapper = new MethodWrapper(this, CreateInstanceMethod, nameMapper).Delegate;
+                ConstructorParams = null;
+            }
+            else
+            {
+                ConstructorWrapper constructorWrapper = new ConstructorWrapper(constructorInfo, nameMapper);
+                ConstructorWrapper = constructorWrapper.Delegate;
+                ConstructorParams = constructorWrapper.ParametersTypeAndName;
+            }
+
             MembersByName = new Dictionary<string, MemberInfo>();
             foreach (MemberInfo member in members)
             {
@@ -51,7 +61,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             return new Dictionary<string, object>
             {
-                { InternalConstructorName(name), ConstructorConstructorWrapper }
+                { InternalConstructorName(name), ConstructorWrapper }
             };
         }
 

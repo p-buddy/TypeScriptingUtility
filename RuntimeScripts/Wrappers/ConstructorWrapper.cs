@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
@@ -16,6 +17,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 		}
 
 		public Delegate Delegate { get; }
+		public (Type, string)[] ParametersTypeAndName { get; }
+
 		private readonly IClrToTsNameMapper mapper;
 		private readonly ConstructorInfo constructorInfo;
 		private readonly Type[] parameterTypes;
@@ -25,6 +28,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 			constructorInfo = info;
 			ParameterInfo[] parameters = info.GetParameters();
 			parameterTypes = parameters.Select(parameter => parameter.ParameterType).ToArray();
+			ParametersTypeAndName = parameters.Select(parameter => (parameter.ParameterType, parameter.Name)).ToArray();
+			
 			bool containsParams = parameters.Length > 0 && parameters[^1].UsesParams();
 			Type methodType = containsParams
 				? FunctionTypes.ObjectFunctionsWithParams[parameters.Length]

@@ -11,31 +11,33 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         public string Declaration { get; }
         public string Reference { get; }
 
-        public TsFunction(IShared shared, Dictionary<Type, TsReference> referenceMap)
+        public TsFunction(IShared shared, in TypeReferenceMap referenceMap)
         {
             MethodInfo method = (shared.NonSpecificClrObject as MulticastDelegate)?.Method ?? throw new Exception("");
             ParameterInfo[] parameters = method.GetParameters();
             ParameterInfo @return = method.ReturnParameter;
+            
+            TypeReferenceMap localMap = referenceMap;
 
             string name = shared.TsType.Name;
             string argsText = String.Join(", ", parameters.Select(GetParameterName));
             string paramsText = String.Join(", ", parameters.Select(GetParameterDeclaration));
             
             Declaration = @$"
-{TsGenerator.ExportConst} {name} = ({paramsText}): {TsParam(@return)} => {{
+{TsGenerator.ExportConst} {name} = ({paramsText}): {TsParam(@return, in localMap)} => {{
     {TsGenerator.TsIgnore}
     return {TsType.Internalize(name)}({argsText});
 }};";
             Reference = shared.TsType.Name;
 
-            string TsParam(ParameterInfo param)
+            static string TsParam(ParameterInfo param, in TypeReferenceMap referenceMap)
             {
-                param.ParameterType.TryGetReference(referenceMap, out string reference);
-                return reference;
+                return referenceMap.GetReference(param.ParameterType);
             }
 
             static string GetParameterName(ParameterInfo param) => param.Name;
-            string GetParameterDeclaration(ParameterInfo param) => $"{param.Name}: {TsParam(param)}";
+
+            string GetParameterDeclaration(ParameterInfo param) => $"{param.Name}: {TsParam(param, localMap)}";
         }
     }
 }
