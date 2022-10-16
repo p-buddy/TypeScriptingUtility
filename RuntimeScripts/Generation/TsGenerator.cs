@@ -1,16 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using pbuddy.TypeScriptingUtility.RuntimeScripts;
-using UnityEditor;
-using UnityEngine;
-using UnityEngine.Assertions;
 
-namespace pbuddy.TypeScriptingUtility.EditorScripts
+namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public static class TsGenerator
     {

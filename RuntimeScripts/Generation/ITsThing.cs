@@ -1,4 +1,4 @@
-namespace pbuddy.TypeScriptingUtility.EditorScripts
+namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public interface ITsThing
     {

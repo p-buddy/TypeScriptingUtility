@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using NUnit.Framework;
-using pbuddy.TypeScriptingUtility.EditorScripts;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 
 namespace pbuddy.TypeScriptingUtility.EditModeTests

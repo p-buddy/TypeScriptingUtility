@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using pbuddy.TypeScriptingUtility.EditorScripts;
 using UnityEngine.Assertions;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 
-namespace pbuddy.TypeScriptingUtility.EditorScripts
+namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public readonly struct TsFunction: ITsThing
     {

@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using pbuddy.TypeScriptingUtility.RuntimeScripts;
 
-namespace pbuddy.TypeScriptingUtility.EditorScripts
+namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public readonly struct TsTuple: ITsThing
     {

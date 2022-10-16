@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using NUnit.Framework;
-using pbuddy.TypeScriptingUtility.EditorScripts;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using UnityEngine;
 using UnityEngine.TestTools;

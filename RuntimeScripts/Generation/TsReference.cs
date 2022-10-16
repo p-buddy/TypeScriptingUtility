@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using JetBrains.Annotations;
-using pbuddy.TypeScriptingUtility.RuntimeScripts;
 using UnityEngine.Assertions;
 
-namespace pbuddy.TypeScriptingUtility.EditorScripts
+namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public readonly struct TsReference
     {

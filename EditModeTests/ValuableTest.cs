@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using pbuddy.TypeScriptingUtility.EditorScripts;
 using pbuddy.TypeScriptingUtility.RuntimeScripts;
-using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.EditModeTests
 {

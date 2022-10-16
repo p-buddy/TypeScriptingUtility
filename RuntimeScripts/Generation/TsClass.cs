@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using pbuddy.TypeScriptingUtility.RuntimeScripts;
 
-namespace pbuddy.TypeScriptingUtility.EditorScripts
+namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public readonly struct TsClass: ITsThing
     {
