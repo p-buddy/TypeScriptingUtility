@@ -9,19 +9,19 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     public readonly struct DataMember
     {
         public Type Type { get; }
+        public ParameterInfo[] IndexParams { get; }
+
         public string Name => member.Name;
             
         private readonly MemberInfo member;
         private readonly Action<object, object> internalSetValue;
             
-        public DataMember(PropertyInfo propertyInfo)
+        public DataMember(PropertyInfo propertyInfo) : this(propertyInfo as MemberInfo)
         {
-            Type = propertyInfo.PropertyType;
-            internalSetValue = GetPropertySetter(propertyInfo);
-            member = propertyInfo;
+            
         }
             
-        public DataMember(FieldInfo fieldInfo)
+        public DataMember(FieldInfo fieldInfo) : this(fieldInfo as MemberInfo)
         {
             Type = fieldInfo.FieldType;
             internalSetValue = fieldInfo.SetValue;
@@ -35,10 +35,13 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 case FieldInfo fieldInfo:
                     Type = fieldInfo.FieldType;
                     internalSetValue = fieldInfo.SetValue;
+                    IndexParams = null;
                     break;
                 case PropertyInfo propertyInfo:
                     Type = propertyInfo.PropertyType;
                     internalSetValue = GetPropertySetter(propertyInfo);
+                    IndexParams = propertyInfo.GetIndexParameters();
+                    IndexParams = IndexParams.Length > 0 ? IndexParams : null;
                     break;
                 default:
                     throw new Exception("Must be field or property");

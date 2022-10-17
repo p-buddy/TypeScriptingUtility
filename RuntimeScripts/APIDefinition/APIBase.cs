@@ -49,6 +49,11 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         
         protected abstract TExecutionDomain Define();
 
+        public T ConvertTo<T>(object obj)
+        {
+            return (T)obj.As(typeof(T), NameMapper);
+        }
+
         private static IShared[] RetrieveTsRootTypes(TExecutionDomain obj)
         {
             // Add caching

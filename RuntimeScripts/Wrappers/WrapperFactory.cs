@@ -34,11 +34,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         private static MemberInfo[] GetWrappedMembers(this Type type) =>
             type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         
-        public static TypeWrapper Wrap(this Type type, IClrToTsNameMapper nameMapper = null)
-        {
-            MemberInfo[] members = type.GetWrappedMembers();
-            return new TypeWrapper(type, members, nameMapper);
-        }
+        public static TypeWrapper Wrap(this Type type, IClrToTsNameMapper nameMapper = null) => new (type, nameMapper);
 
         public static object Wrap(this object obj, IClrToTsNameMapper nameMapper = null)
         {

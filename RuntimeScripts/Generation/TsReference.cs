@@ -87,7 +87,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     references.Add(reference);
                 }
 
-                tsInterface = new TsReference($"[{string.Join(", ", references)}]", type, ReferenceType.Tuple);
+                tsInterface = new TsReference($"[{references.Csv()}]", type, ReferenceType.Tuple);
                 return true;
             }
             
@@ -128,8 +128,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     args.Add($"arg{index}: {reference}");
                 }
 
-                string argsText = string.Join(", ", args);
-                tsInterface = new TsReference($"({argsText}) => {returnText}", type, ReferenceType.LocalFunction);
+                tsInterface = new TsReference($"({args.Csv()}) => {returnText}", type, ReferenceType.LocalFunction);
                 return true;
             }
             
@@ -159,7 +158,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         }
 
         private static string NonGenericName(Type type, IEnumerable<string> argsText) =>
-            $"{type.Name.Substring(0, type.Name.IndexOf("`", StringComparison.Ordinal))}<{string.Join(", ", argsText)}>";
+            $"{type.Name.Substring(0, type.Name.IndexOf("`", StringComparison.Ordinal))}<{argsText.Csv()}>";
 
         private static string EnumDeclaration(Type type)
         {
@@ -187,6 +186,16 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             }
                 
             DataMember member = new DataMember(memberInfo);
+
+            if (member.IndexParams is not null)
+            {
+                var localMap = typeMap;
+                string parameters = member
+                                    .IndexParams
+                                    .Select(param => $"{param.Name}: {localMap.GetReference(param.ParameterType)}")
+                                    .Csv();
+                return $"[{parameters}]: {typeMap.GetReference(member.Type)}";
+            }
             
             // TODO handle indexers
             
@@ -216,7 +225,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 }
                 
                 string name = api.NameMapper.ToTs(memberInfo.Name);
-                return $"{name}{(isArrowFunction ? ": " : "")}({string.Join(", ", parametersText)}){(isArrowFunction ? " =>" : ":")} {typeMap.GetReference(methodInfo.ReturnType)}";
+                return $"{name}{(isArrowFunction ? ": " : "")}({parametersText.Csv()}){(isArrowFunction ? " =>" : ":")} {typeMap.GetReference(methodInfo.ReturnType)}";
             }
             
             #endregion Local Static Functions
@@ -256,8 +265,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         public static string GetMembersDeclaration(Type type, in TypeReferenceMap typeMap)
         {
             TypeReferenceMap localMap = typeMap;
-            IEnumerable<MemberInfo> members = GetMembersRequiringDeclaration(type, in typeMap);
-            return String.Join(", " + NewLineIndent, members.Select(member => GetMemberDeclaration(member, in localMap)));
+            return GetMembersRequiringDeclaration(type, in typeMap)
+                   .Select(member => GetMemberDeclaration(member, in localMap))
+                   .Csv(NewLineIndent);
         }
         
         private static string GetDeclarationFromMembers(Type type, in TypeReferenceMap typeMap)

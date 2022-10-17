@@ -23,13 +23,12 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             engine.SetValue(TsType.Internalize(name), item);
         }
 
-        public void AddType(string name, TypeWrapper wrappedType)
+        public void AddType(string name, TypeWrapper wrappedType, IAPI api)
         {
-            foreach (KeyValuePair<string, object> global in wrappedType.GetGlobalsToAdd(name))
+            foreach (KeyValuePair<string, object> global in wrappedType.GetGlobalsToAdd(name, api))
             {
                 engine.SetValue(global.Key, global.Value);
             }
-            engine.Execute(wrappedType.GetJsClassDeclaration(name));
         }
 
         public void ApplyAPI<T>(APIBase<T> api)
@@ -42,7 +41,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 link.TsType.Match(new TsType.Matcher.Action
                 {
                     OnVariable = () => self.AddVariable(name, link.NonSpecificClrObject.Wrap(api.NameMapper)),
-                    OnClass = () => self.AddType(name, link.ClrType.Wrap(api.NameMapper)),
+                    OnClass = () => self.AddType(link.TsType.Name, link.ClrType.Wrap(api.NameMapper), api),
                     OnFunction = () => self.AddFunction(name, link.NonSpecificClrObject.Wrap(api.NameMapper))
                 });
             } 

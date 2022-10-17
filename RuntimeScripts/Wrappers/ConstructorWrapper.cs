@@ -17,7 +17,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 		}
 
 		public Delegate Delegate { get; }
-		public (Type, string)[] ParametersTypeAndName { get; }
+		public ParameterInfo[] Parameters { get; }
 
 		private readonly IClrToTsNameMapper mapper;
 		private readonly ConstructorInfo constructorInfo;
@@ -26,17 +26,16 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 		public ConstructorWrapper(ConstructorInfo info, IClrToTsNameMapper mapper): this()
 		{
 			constructorInfo = info;
-			ParameterInfo[] parameters = info.GetParameters();
-			parameterTypes = parameters.Select(parameter => parameter.ParameterType).ToArray();
-			ParametersTypeAndName = parameters.Select(parameter => (parameter.ParameterType, parameter.Name)).ToArray();
+			Parameters = info.GetParameters();
+			parameterTypes = Parameters.Select(parameter => parameter.ParameterType).ToArray();
 			
-			bool containsParams = parameters.Length > 0 && parameters[^1].UsesParams();
+			bool containsParams = Parameters.Length > 0 && Parameters[^1].UsesParams();
 			Type methodType = containsParams
-				? FunctionTypes.ObjectFunctionsWithParams[parameters.Length]
-				: FunctionTypes.ObjectFunctions[parameters.Length];
+				? FunctionTypes.ObjectFunctionsWithParams[Parameters.Length]
+				: FunctionTypes.ObjectFunctions[Parameters.Length];
 			MethodInfo method = containsParams
-				? InvokeMethodsWithParams[parameters.Length]
-				: InvokeMethods[parameters.Length];
+				? InvokeMethodsWithParams[Parameters.Length]
+				: InvokeMethods[Parameters.Length];
 
 			this.mapper = mapper;
 			Delegate = Delegate.CreateDelegate(methodType, this, method);

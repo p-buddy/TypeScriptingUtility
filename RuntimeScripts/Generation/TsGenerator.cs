@@ -56,6 +56,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             return String.Join(Environment.NewLine, lines);
         }
 
+        public static string Csv(this IEnumerable<string> items, string after = "") =>
+            string.Join(", " + after, items);
+
         private static HashSet<Type> RetrieveNestedTypes(this IShared[] allShared)
         {
             HashSet<Type> nestedTypes = new HashSet<Type>();

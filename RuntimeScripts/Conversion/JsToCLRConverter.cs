@@ -48,6 +48,11 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     return obj.AsType(type);
                 }
 
+                if (type.IsEnum)
+                {
+                    return ConvertEnumValueBack($"{obj}", type).AsType(type);
+                }
+
                 if (obj.TryTreatAsValuable(type, mapper, out object converted))
                 {
                     return converted;
@@ -56,6 +61,10 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 switch (obj)
                 {
                     case ExpandoObject expandoObject:
+                        if (expandoObject.Has("internal"))
+                        {
+                            return expandoObject.Get("internal");
+                        }
                         return expandoObject.To(type, Activator.CreateInstance, mapper);
                     case Array arr:
                         return ExtractArray(type, arr, mapper);
@@ -144,6 +153,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             foreach (KeyValuePair<string, object> kvp in valueByProperty)
             {
                 string name = mapper.MapToClr(kvp.Key);
+
+                if (name == "Internal") continue;
+                
                 if (!TryMatchMember(name, type, out DataMember member))
                 {
                     throw new Exception($"Could not match member for: {name}");
@@ -224,7 +236,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             {
                 for (int i = 0; i < array.Length; i++)
                 {
-                    ExpandoObject element = array.GetValue(i) as ExpandoObject;
+                    object objElement = array.GetValue(i);
+                    ExpandoObject element = objElement as ExpandoObject;
                     converted.SetValue(To(element, elementType, Activator.CreateInstance, mapper).AsType(elementType), i); 
                 }
             }
