@@ -8,6 +8,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         IClrToTsNameMapper NameMapper { get; }
         IShared[] Shared { get; }
         Dictionary<Type, IShared> this[TsType.Specification spec] { get; }
-        T ConvertTo<T>(object obj);
+        Delegate MakeConvertToMethod(Type type);
     }
 }

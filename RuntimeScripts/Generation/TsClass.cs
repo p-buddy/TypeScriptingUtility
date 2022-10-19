@@ -21,7 +21,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         private static string GetDeclaration(IShared shared, in TypeReferenceMap typeMap)
         {
             const string tab = "\t";
-            static string Tab(int count) => String.Concat(Enumerable.Repeat(tab, count));
+            static string Tab(int count, string content = "") => $"{String.Concat(Enumerable.Repeat(tab, count))}{content}";
             const string internalName = "internal";
             const string self = "this." + internalName;
 
@@ -42,7 +42,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
             builder.Append(@$"
 {Tab(1)}constructor({paramsText}) {{ 
-{Tab(2)}{TsGenerator.TsIgnore}
+{Tab(2, TsGenerator.TsIgnore)}
 {Tab(2)}{self} = {TypeWrapper.InternalConstructorName(name)}(...arguments); 
 {Tab(1)}}}
 ");
@@ -50,29 +50,28 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             foreach (MemberInfo member in TsReference.GetMembersRequiringDeclaration(type, in typeMap))
             {
                 string tsName = typeMap.API.NameMapper.ToTs(member.Name);
-                string internalMember = $"{self}.{member.Name}";
 
                 switch (member.MemberType)
                 {
                     case MemberTypes.Field:
                     case MemberTypes.Property:
                         DataMember dataMember = new (member);
+                        Type memberType = dataMember.Type;
                         string typeRef = typeMap.GetReference(dataMember.Type);
-                        builder.AppendLine(tab + $"get {tsName}(): {typeRef} {{ return {internalMember}; }}");
-                        builder.AppendLine(tab + $"set {tsName}(value: {typeRef}) {{ {internalMember} = value; }}");
+                        string internalMember = $"{self}.{member.Name}";
+                        builder.AppendLine(tab + TsGenerator.TsIgnore);
+                        builder.AppendLine(tab + $"get {tsName}(): {typeRef} {{ return {TypeWrapper.InternalWrapName}({internalMember}); }}");
+                        builder.AppendLine(tab + TsGenerator.TsIgnore);
+                        builder.AppendLine(tab + $"set {tsName}(value: {typeRef}) {{ {internalMember} = {TypeWrapper.InternalConverterName(memberType)}(value); }}");
                         continue;
                     case MemberTypes.Method:
                         MethodInfo method = member as MethodInfo;
                         Assert.IsNotNull(method);
-                        string returnStatement = method.ReturnType == typeof(void) ? "" : "return ";
-
-                        Func<object, int> x = typeMap.API.ConvertTo<int>;
                         
-                        // covert_int(4);
-                        // convertTo_KeyFrame(..)
                         builder.AppendLine(@$"
 {Tab(1)}{TsReference.GetMemberDeclaration(member, in typeMap, false)} {{ 
-{Tab(2)}//{returnStatement}{self}.{member.Name}({method.GetParameters().Select(p => p.Name).Csv()}); 
+{Tab(2, TsGenerator.TsIgnore)}
+{Tab(2)}{ReturnStatement(method)}
 {Tab(1)}}}
 ");
                         continue;
@@ -81,15 +80,19 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 }
             }
 
-            // TODO
-            // returned objects should also be converted to expando's before being returned
-            
-            /**
-             * return Expand(this.internal.AddFrame(convertTo_KeyFrame(frame)));
-             */
-            
             builder.AppendLine("}");
             return builder.ToString();
+
+            static string ReturnStatement(MethodInfo method)
+            {
+                bool returnsValue = method.ReturnType != typeof(void);
+                string call = $"{self}.{method.Name}({method.GetParameters().Select(ConvertedParameter).Csv()})";
+                if (!returnsValue) return $"{call};";
+                return $"return {TypeWrapper.InternalWrapName}({call});";
+            }
+
+            static string ConvertedParameter(ParameterInfo parameter) =>
+                $"{TypeWrapper.InternalConverterName(parameter.ParameterType)}({parameter.Name})";
         }
     }
 }

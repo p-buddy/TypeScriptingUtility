@@ -19,10 +19,13 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         private readonly Type type;
         public Delegate ConstructorWrapper { get; }
         public ParameterInfo[] ConstructorParams { get; }
+        
+        private readonly MemberInfo[] wrappedMembers { get; }
 
-        public TypeWrapper(Type type, IClrToTsNameMapper nameMapper): this()
+        public TypeWrapper(Type type, MemberInfo[] wrappedMembers, IClrToTsNameMapper nameMapper): this()
         {
             this.type = type;
+            this.wrappedMembers = wrappedMembers;
             
             ConstructorInfo[] constructors = type.GetConstructors();
             if (constructors.Length > 1)
@@ -57,14 +60,46 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             {
                 { InternalConstructorName(name), ConstructorWrapper }
             };
-            // TODO collect all members and wrap funcs for all conversions
-            Func<object, int> x = api.ConvertTo<int>;
-            dictionary["convertTo_Keyframe"] = x.Wrap();
+
+            void AddType(Type toAdd)
+            {
+                string converter = InternalConverterName(toAdd);
+                if (dictionary.ContainsKey(converter)) return;
+                dictionary[converter] = api.MakeConvertToMethod(toAdd);
+            }
+
+            foreach (MemberInfo member in wrappedMembers)
+            {
+                switch (member.MemberType)
+                {
+                    case MemberTypes.Field:
+                        var field = member as FieldInfo;
+                        Assert.IsNotNull(field);
+                        AddType(field.FieldType);
+                        break;
+                    case MemberTypes.Property:
+                        var property = member as PropertyInfo;
+                        Assert.IsNotNull(property);
+                        AddType(property.PropertyType);
+                        break;
+                    case MemberTypes.Method:
+                        var method = member as MethodInfo;
+                        Assert.IsNotNull(method);
+                        foreach (ParameterInfo parameter in method.GetParameters())
+                        {
+                            AddType(parameter.ParameterType);
+                        }
+                        break;
+                }
+            }
+            
             return dictionary;
         }
 
         public static string InternalConstructorName(string name) => $"make_{name}";
-        public static string ConvertString(Type type) => $"convertTo_{type.Name}";
+        public static string InternalConverterName(Type type) => $"convertTo_{type.Name.Replace("[]", "s").Replace("`", "_")}";
+        
+        public const string InternalWrapName = "wrap";
 
     }
 }

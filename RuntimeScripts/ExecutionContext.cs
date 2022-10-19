@@ -25,9 +25,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
         public void AddType(string name, TypeWrapper wrappedType, IAPI api)
         {
-            foreach (KeyValuePair<string, object> global in wrappedType.GetGlobalsToAdd(name, api))
+            foreach ((string key, object global) in wrappedType.GetGlobalsToAdd(name, api))
             {
-                engine.SetValue(global.Key, global.Value);
+                engine.SetValue(key, global);
             }
         }
 
@@ -35,6 +35,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             ExecutionContext self = this;
             IShared[] links = api.Shared;
+            
             foreach (IShared link in links)
             {
                 string name = api.NameMapper.MapToTs(link.TsType.Name);
@@ -45,6 +46,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     OnFunction = () => self.AddFunction(name, link.NonSpecificClrObject.Wrap(api.NameMapper))
                 });
             } 
+            
+            self.AddFunction(TypeWrapper.InternalWrapName, api.WrapDelegate);
         }
     }
 }

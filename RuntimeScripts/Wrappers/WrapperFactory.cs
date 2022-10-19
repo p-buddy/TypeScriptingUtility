@@ -34,7 +34,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         private static MemberInfo[] GetWrappedMembers(this Type type) =>
             type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         
-        public static TypeWrapper Wrap(this Type type, IClrToTsNameMapper nameMapper = null) => new (type, nameMapper);
+        public static TypeWrapper Wrap(this Type type, IClrToTsNameMapper nameMapper = null) =>
+            new(type, type.GetWrappedMembers(), nameMapper);
 
         public static object Wrap(this object obj, IClrToTsNameMapper nameMapper = null)
         {
@@ -48,7 +49,6 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             Type type = obj.GetType();
             MemberInfo[] members = type.GetWrappedMembers();
             ExpandoObject expando = new ExpandoObject();
-            var fieldAndPropertyWrappers = new List<FieldAndPropertyWrapper>();
             
             foreach (MemberInfo member in members)
             {
@@ -57,12 +57,12 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     case MemberTypes.Field:
                         var field = member as FieldInfo;
                         Assert.IsNotNull(field);
-                        fieldAndPropertyWrappers.Add(new FieldAndPropertyWrapper(obj, field, expando, nameMapper));
+                        new FieldAndPropertyWrapper(obj, field, expando, nameMapper);
                         break;
                     case MemberTypes.Property:
                         var property = member as PropertyInfo;
                         Assert.IsNotNull(property);
-                        fieldAndPropertyWrappers.Add(new FieldAndPropertyWrapper(obj, property, expando, nameMapper));
+                        new FieldAndPropertyWrapper(obj, property, expando, nameMapper);
                         break;
                     case MemberTypes.Method:
                         var method = member as MethodInfo;
@@ -72,10 +72,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                         break;
                 }
             }
-            
-            // Collect wrappers to avoid them being garbage collected
-            expando.Add("_wrappers", fieldAndPropertyWrappers.ToArray()); 
-            
+
             return expando;
         }
     }

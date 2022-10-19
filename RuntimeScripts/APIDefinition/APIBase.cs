@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using UnityEngine.Assertions;
 
@@ -12,10 +13,49 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
     /// <typeparam name="TExecutionDomain"></typeparam>
     public abstract class APIBase<TExecutionDomain> : IAPI, IDisposable
     {
+        private const BindingFlags Flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy |
+                                           BindingFlags.NonPublic;
+
         private bool defined;
+        private Delegate wrapDelegate;
+        private MethodInfo genericConvertMethod;
+        private MethodInfo wrapMethod;
+
         private TExecutionDomain domain;
         private IShared[] shared;
         private Dictionary<TsType.Specification, Dictionary<Type, IShared>> typesBySpecification;
+        
+        private readonly Dictionary<Type, Type> convertToTypeByType = new();
+        private readonly Dictionary<Type, Delegate> convertToDelegateByType = new();
+
+        public MethodInfo GenericConvertMethod
+        {
+            get
+            {
+                genericConvertMethod ??= typeof(APIBase<TExecutionDomain>).GetMethod(nameof(ConvertTo), Flags);
+                Assert.IsNotNull(genericConvertMethod);
+                return genericConvertMethod;
+            }
+        }
+        
+        public MethodInfo WrapMethod
+        {
+            get
+            {
+                wrapMethod ??= typeof(APIBase<TExecutionDomain>).GetMethod(nameof(Wrap), Flags);
+                Assert.IsNotNull(wrapMethod);
+                return wrapMethod;
+            }
+        }
+
+        public Delegate WrapDelegate
+        {
+            get
+            {
+                wrapDelegate ??= Delegate.CreateDelegate(typeof(Func<object, object>), this, WrapMethod);
+                return wrapDelegate;
+            }
+        }
 
         public TExecutionDomain Domain
         {
@@ -49,7 +89,31 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         
         protected abstract TExecutionDomain Define();
 
-        public T ConvertTo<T>(object obj)
+        public object Wrap(object obj)
+        {
+            return obj.Wrap(NameMapper);
+        }
+        
+        public Delegate MakeConvertToMethod(Type type)
+        {
+            if (convertToDelegateByType.TryGetValue(type, out Delegate del))
+            {
+                return del;
+            }
+
+            if (!convertToTypeByType.TryGetValue(type, out Type delegateType))
+            {
+                delegateType = typeof(Func<,>).MakeGenericType(typeof(object), type);
+                convertToTypeByType[type] = delegateType;
+            }
+            
+            MethodInfo convertToTypeMethod = GenericConvertMethod.MakeGenericMethod(type);
+            del = Delegate.CreateDelegate(delegateType, this, convertToTypeMethod);
+            convertToDelegateByType[type] = del;
+            return del;
+        }
+        
+        private T ConvertTo<T>(object obj)
         {
             return (T)obj.As(typeof(T), NameMapper);
         }
