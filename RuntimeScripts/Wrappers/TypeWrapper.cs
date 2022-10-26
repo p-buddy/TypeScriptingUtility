@@ -19,8 +19,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         private readonly Type type;
         public Delegate ConstructorWrapper { get; }
         public ParameterInfo[] ConstructorParams { get; }
-        
-        private readonly MemberInfo[] wrappedMembers { get; }
+
+        private readonly MemberInfo[] wrappedMembers;
 
         public TypeWrapper(Type type, MemberInfo[] wrappedMembers, IClrToTsNameMapper nameMapper): this()
         {
@@ -56,7 +56,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 
         public Dictionary<string, object> GetGlobalsToAdd(string name, IAPI api)
         {
-            Dictionary<string, object> dictionary = new()
+            Dictionary<string, object> dictionary = new(1 + wrappedMembers.Length)
             {
                 { InternalConstructorName(name), ConstructorWrapper }
             };
@@ -85,7 +85,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                     case MemberTypes.Method:
                         var method = member as MethodInfo;
                         Assert.IsNotNull(method);
-                        foreach (ParameterInfo parameter in method.GetParameters())
+                        foreach (ParameterInfo parameter in method.GetCachedParameters())
                         {
                             AddType(parameter.ParameterType);
                         }

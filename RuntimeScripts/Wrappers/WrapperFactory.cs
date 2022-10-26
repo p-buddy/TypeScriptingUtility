@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine.Assertions;
-using UnityEngine.UIElements;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {
     public static class WrapperFactory
     {
+        private static readonly Dictionary<Type, MemberInfo[]> WrappedMembersByTypeCache = new();
+        private static readonly Dictionary<Type, TypeWrapper> WrappersByType = new();
         public static MethodInfo WrapTypeMethod { get; }
         public static MethodInfo WrapObjectMethod { get; }
 
@@ -31,8 +31,13 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         
         private static string MappedName(this MemberInfo member, IClrToTsNameMapper mapper) => mapper.MapToTs(member.Name);
         
-        private static MemberInfo[] GetWrappedMembers(this Type type) =>
-            type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        private static MemberInfo[] GetWrappedMembers(this Type type)
+        {
+            if (WrappedMembersByTypeCache.TryGetValue(type, out MemberInfo[] members)) return members;
+            members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            WrappedMembersByTypeCache[type] = members;
+            return members;
+        }
         
         public static TypeWrapper Wrap(this Type type, IClrToTsNameMapper nameMapper = null) =>
             new(type, type.GetWrappedMembers(), nameMapper);
@@ -41,7 +46,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             if (obj is MulticastDelegate del)
             {
-                var target = del.Target;
+                object target = del.Target;
                 MethodInfo methodInfo = del.GetMethodInfo();
                 return new MethodWrapper(target, methodInfo, nameMapper).Delegate;
             }

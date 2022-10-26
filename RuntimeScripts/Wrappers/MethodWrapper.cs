@@ -37,8 +37,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 			this.methodInfo = methodInfo;
 			this.mapper = mapper;
 
-			ParameterInfo[] parameters = methodInfo.GetParameters();
-			parameterTypes = parameters.Select(parameter => parameter.ParameterType).ToArray();
+			ParameterInfo[] parameters = methodInfo.GetCachedParameters();
+			parameterTypes = methodInfo.GetCachedParameterTypes();
 			
 			int paramsLength = parameterTypes.Length;
 			bool isAction = methodInfo.ReturnType == typeof(void);
@@ -62,7 +62,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 			
 			Type memberType = objectMethodCollection[paramsLength];
 			MethodInfo method = memberMethodCollection[paramsLength];
-			Delegate = Delegate.CreateDelegate(memberType, this, method);
+			Delegate = method.GetCachedDelegate(memberType, this);
 		}
 		
 		#region Generated Content

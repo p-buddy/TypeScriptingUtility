@@ -26,8 +26,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 		public ConstructorWrapper(ConstructorInfo info, IClrToTsNameMapper mapper): this()
 		{
 			constructorInfo = info;
-			Parameters = info.GetParameters();
-			parameterTypes = Parameters.Select(parameter => parameter.ParameterType).ToArray();
+			Parameters = info.GetCachedParameters();
+			parameterTypes = info.GetCachedParameterTypes();
 			
 			bool containsParams = Parameters.Length > 0 && Parameters[^1].UsesParams();
 			Type methodType = containsParams
@@ -38,7 +38,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 				: InvokeMethods[Parameters.Length];
 
 			this.mapper = mapper;
-			Delegate = Delegate.CreateDelegate(methodType, this, method);
+			Delegate = method.GetCachedDelegate(methodType, this);
 		}
 
 		#region Generated Content
