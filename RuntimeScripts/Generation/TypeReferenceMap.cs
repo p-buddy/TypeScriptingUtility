@@ -51,7 +51,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         {
             if (type.IsGenericParameter) return type.Name;
             bool success = TryGetReferenceString(type, out string reference);
-            return success ? reference : throw new Exception();
+            return success ? reference : throw new Exception($"Could not retrieve reference to {type}");
         }
         
         private void AddClassReferences()
