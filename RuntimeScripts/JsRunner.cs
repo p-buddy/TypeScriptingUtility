@@ -13,6 +13,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
         private const string TsToJsFile = "tsToJs.txt";
         static JsRunner()
         {
+            /*
             TsToJsEngine = Construct();
             TsToJsEngine.SetValue("global", new object());
             TsToJsEngine.SetValue("console", new JsLikeConsole());
@@ -25,7 +26,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                                            .Select(AssetDatabase.GUIDToAssetPath)
                                            .First(path => path.EndsWith(TsToJsFile));
                 return File.ReadAllText(path);
-            }
+            }*/
         }
 
         public static string CompileTs(string code) => TsToJsEngine.Evaluate($"tsToJs(`{code}`)").AsString();
@@ -35,6 +36,9 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             decorator?.Invoke(new ExecutionContext(engine));
             engine.Execute(js);
         }
+
+        public static ExecutionContext GetExecutionContext() => new (Construct());
+
 
         public static void ExecuteFile(string path, Action<ExecutionContext> decorator = null)
         {

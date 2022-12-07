@@ -49,5 +49,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             
             self.AddFunction(TypeWrapper.InternalWrapName, api.WrapDelegate);
         }
+
+        public void Execute(string code) => engine.Execute(code);
     }
 }
