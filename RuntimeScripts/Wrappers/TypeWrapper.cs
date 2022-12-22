@@ -60,7 +60,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             {
                 { InternalConstructorName(name), ConstructorWrapper }
             };
-
+            
             void AddType(Type toAdd)
             {
                 string converter = InternalConverterName(toAdd);

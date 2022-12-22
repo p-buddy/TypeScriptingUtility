@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Jint;
+using UnityEngine;
 
 namespace pbuddy.TypeScriptingUtility.RuntimeScripts
 {

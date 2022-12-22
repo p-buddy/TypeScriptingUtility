@@ -88,7 +88,8 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
                 bool returnsValue = method.ReturnType != typeof(void);
                 string call = $"{self}.{method.Name}({method.GetParameters().Select(ConvertedParameter).Csv()})";
                 if (!returnsValue) return $"{call};";
-                return $"return {TypeWrapper.InternalWrapName}({call});";
+                // {TypeWrapper.InternalWrapName}
+                return $"return {call};";
             }
 
             static string ConvertedParameter(ParameterInfo parameter) =>

@@ -21,5 +21,7 @@ namespace pbuddy.TypeScriptingUtility.RuntimeScripts
             TsType = tsType;
             ClrType = obj is Type type ? type : obj.GetType();
         }
+
+        public override string ToString() => $"[Managed type: {ClrType.Name}; Name: {TsType.Name}; Spec: {TsType.Spec}]";
     }
 }
